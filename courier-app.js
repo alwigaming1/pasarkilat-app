@@ -2,7 +2,7 @@
 
 // GANTI DENGAN URL BACKEND ANDA DI RAILWAY YANG SUDAH JALAN (PASTIKAN MENGGUNAKAN https://)!
 // Contoh: 'https://nama-aplikasi-anda.up.railway.app'
-const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app'; // <--- URL FINAL YANG BENAR!
+const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app';
 
 let socket = null;
 let whatsappStatus = 'disconnected';
@@ -16,7 +16,171 @@ let courierState = {
 let jobIdCounter = 1000;
 let simulatedJobInterval = null;
 
+// Di courier-app.js - TAMBAHKAN FUNGSI BERIKUT:
 
+// === VARIABLES UNTUK CHAT ===
+let currentChatJobId = null;
+let chatMessages = {};
+
+// === SHOW CHAT MODAL (DIPERBAIKI) ===
+function showChatModal(jobId) {
+    const modal = document.getElementById('chatModal');
+    const jobIdEl = document.getElementById('chatJobId');
+    const chatMessagesEl = document.getElementById('chatMessages');
+    
+    currentChatJobId = jobId;
+    jobIdEl.textContent = jobId;
+    
+    // Minta history chat dari server
+    if (socket) {
+        socket.emit('get_chat_history', { jobId: jobId });
+    }
+    
+    // Tampilkan modal
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    
+    // Load existing messages jika ada
+    loadChatMessages(jobId);
+}
+
+// === LOAD CHAT MESSAGES ===
+function loadChatMessages(jobId) {
+    const chatMessagesEl = document.getElementById('chatMessages');
+    if (!chatMessagesEl) return;
+    
+    const messages = chatMessages[jobId] || [];
+    chatMessagesEl.innerHTML = '';
+    
+    messages.forEach(msg => {
+        const messageElement = createMessageElement(msg);
+        chatMessagesEl.appendChild(messageElement);
+    });
+    
+    // Scroll ke bawah
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+}
+
+// === CREATE MESSAGE ELEMENT ===
+function createMessageElement(messageData) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message-item ${messageData.type === 'sent' ? 'sent' : 'received'}`;
+    
+    const time = new Date(messageData.timestamp).toLocaleTimeString('id-ID', { 
+        hour: '2-digit', minute: '2-digit' 
+    });
+    
+    messageDiv.innerHTML = `
+        <div class="message-bubble">${messageData.message}</div>
+        <div class="message-footer">
+            <span class="message-time">${time}</span>
+            ${messageData.type === 'sent' ? '<span class="message-status read">✓✓</span>' : ''}
+        </div>
+    `;
+    
+    return messageDiv;
+}
+
+// === SEND CHAT MESSAGE (DIPERBAIKI) ===
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message || !currentChatJobId) return;
+    
+    // Tampilkan pesan langsung di UI (optimistic update)
+    const tempMessage = {
+        id: 'temp_' + Date.now(),
+        sender: 'courier',
+        message: message,
+        timestamp: new Date(),
+        type: 'sent'
+    };
+    
+    addMessageToChat(currentChatJobId, tempMessage);
+    input.value = '';
+    
+    // Kirim ke server
+    if (socket) {
+        socket.emit('send_message', {
+            jobId: currentChatJobId,
+            message: message
+        });
+    }
+}
+
+// === ADD MESSAGE TO CHAT ===
+function addMessageToChat(jobId, messageData) {
+    if (!chatMessages[jobId]) {
+        chatMessages[jobId] = [];
+    }
+    
+    // Hapus temporary message jika ada
+    chatMessages[jobId] = chatMessages[jobId].filter(msg => msg.id !== messageData.id);
+    
+    // Tambahkan message baru
+    chatMessages[jobId].push(messageData);
+    
+    // Sort by timestamp
+    chatMessages[jobId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
+    // Update UI jika chat sedang terbuka
+    if (currentChatJobId === jobId) {
+        loadChatMessages(jobId);
+    }
+}
+
+// === SOCKET EVENT LISTENERS (TAMBAHKAN) ===
+function setupChatSocketListeners() {
+    if (!socket) return;
+    
+    // Terima pesan baru dari customer
+    socket.on('new_message', (data) => {
+        console.log('📨 Pesan baru dari customer:', data);
+        addMessageToChat(data.jobId, data.message);
+        
+        // Show notification jika chat tidak sedang terbuka
+        if (currentChatJobId !== data.jobId) {
+            showNotification(`Pesan baru dari Customer #${data.jobId}`, 'info');
+        }
+    });
+    
+    // Konfirmasi pesan terkirim
+    socket.on('message_sent', (data) => {
+        if (data.success && data.message) {
+            addMessageToChat(data.jobId, data.message);
+        } else if (!data.success) {
+            showNotification(`Gagal mengirim pesan: ${data.error}`, 'error');
+        }
+    });
+    
+    // Terima history chat
+    socket.on('chat_history', (data) => {
+        chatMessages[data.jobId] = data.messages;
+        if (currentChatJobId === data.jobId) {
+            loadChatMessages(data.jobId);
+        }
+    });
+}
+
+// === INIT CHAT SYSTEM ===
+function initChatSystem() {
+    // Enter key untuk kirim pesan
+    document.getElementById('chatInput')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendChatMessage();
+        }
+    });
+    
+    setupChatSocketListeners();
+}
+
+// Panggil di initCourierApp()
+function initCourierApp() {
+    // ... kode existing ...
+    
+    initChatSystem(); // Tambahkan ini
+}
 // --- UTILITY FUNCTIONS ---
 
 // Fungsi notifikasi sederhana
