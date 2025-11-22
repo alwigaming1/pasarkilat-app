@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PasarKilat - Aplikasi Kurir</title>
+    <link rel="icon" href="https://via.placeholder.com/32">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
+</head>
+<body>
+    <div class="app-container">
+        <header class="courier-header">
+            <div class="header-main">
+                <button class="menu-btn" id="menuBtn">
+                    <span class="menu-icon">☰</span>
+                </button>
+                <div class="header-left">
+                    <div class="logo">PasarKilat</div>
+                    <div class="status-indicator">
+                        <div class="status-dot online"></div>
+                        <span class="status-text">Online</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="balance-display">
+                        <span class="balance-label">Saldo:</span>
+                        <span class="balance-amount">Rp 185.000</span>
+                    </div>
+                    <div class="user-avatar">🚴</div>
+                </div>
+            </div>
+            <div class="status-control">
+                <label class="toggle-container">
+                    <span class="toggle-label">Mode Aktif</span>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="statusToggle" checked>
+                        <span class="slider"></span>
+                    </div>
+                </label>
+            </div>
+        </header>
+
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="user-info">
+                    <div class="user-avatar">🚴</div>
+                    <div class="user-details">
+                        <div class="user-name">Kurir PasarKilat 001</div>
+                        <div class="user-rating">⭐️ 4.9 (1,234 reviews)</div>
+                    </div>
+                </div>
+                <button class="close-sidebar" id="closeSidebar">✕</button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-page="dashboard"><span class="nav-icon">🏠</span><span class="nav-text">Dashboard</span></a>
+                <a href="#" class="nav-item" data-page="jobs"><span class="nav-icon">📦</span><span class="nav-text">Pesanan Baru</span><span class="nav-badge" id="jobsBadge" style="display:none;">0</span></a>
+                <a href="#" class="nav-item" data-page="active-delivery"><span class="nav-icon">📍</span><span class="nav-text">Pengiriman Aktif</span></a>
+                <a href="#" class="nav-item" data-page="earnings"><span class="nav-icon">💰</span><span class="nav-text">Penghasilan</span></a>
+                <a href="#" class="nav-item" data-page="history"><span class="nav-icon">📜</span><span class="nav-text">Riwayat</span></a>
+                <a href="#" class="nav-item" data-page="performance"><span class="nav-icon">📈</span><span class="nav-text">Performa</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <div class="status-dot" id="whatsappStatusDot"></div>
+                    <span id="whatsappStatusText">WhatsApp: DISCONNECTED</span>
+                </div>
+                <button class="logout-btn" onclick="showNotification('Simulasi Log Out', 'warning')">🚪 Keluar</button>
+            </div>
+        </div>
+        <div class="overlay" id="overlay"></div>
+
+        <main class="app-pages">
+            
+            <section id="dashboard" class="page active">
+                <div class="main-content">
+                    <div class="stats-section">
+                        <div class="section-title">Ringkasan Hari Ini</div>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-content">
+                                    <span class="stat-icon">✅</span>
+                                    <div class="stat-details">
+                                        <div class="stat-value" id="statsCompleted">0</div>
+                                        <div class="stat-label">Selesai</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-content">
+                                    <span class="stat-icon">⭐</span>
+                                    <div class="stat-details">
+                                        <div class="stat-value" id="statsRating">5.0</div>
+                                        <div class="stat-label">Rating</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-content">
+                                    <span class="stat-icon">⏱️</span>
+                                    <div class="stat-details">
+                                        <div class="stat-value" id="statsOnlineTime">0h</div>
+                                        <div class="stat-label">Waktu Online</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="delivery-preview-section" id="activeDeliveryCard" style="display:none;">
+                        <div class="section-header">
+                            <div class="section-title">Pengiriman Aktif</div>
+                            <span class="timer-display" id="deliveryTimer">00:00:00</span>
+                        </div>
+                        <div class="delivery-preview-card">
+                            <div class="route-map-placeholder">
+                                <div class="route-line"></div>
+                                <div class="route-point start">
+                                    <div class="point-marker start"></div>
+                                    <div class="point-label">Pickup</div>
+                                </div>
+                                <div class="route-point end">
+                                    <div class="point-marker end"></div>
+                                    <div class="point-label">Tujuan</div>
+                                </div>
+                                <div class="current-position">
+                                    <div class="courier-marker">
+                                        <span class="marker-icon">🛵</span>
+                                    </div>
+                                    <div class="point-label">Anda</div>
+                                </div>
+                            </div>
+                            <div class="delivery-details-grid">
+                                <div class="stat"><span class="label">ID:</span> <span class="value" id="deliveryId">#1001</span></div>
+                                <div class="stat"><span class="label">Tujuan:</span> <span class="value" id="deliveryAddress">Jl. Sudirman No. 123</span></div>
+                            </div>
+                            <button class="view-delivery-btn" onclick="showPage('active-delivery')">LIHAT DETAIL & SELESAI</button>
+                        </div>
+                    </div>
+                    
+                    <div class="jobs-preview-section">
+                        <div class="section-header">
+                            <div class="section-title">Pesanan Baru</div>
+                            <a href="#" class="see-all" onclick="showPage('jobs'); return false;">Lihat Semua</a>
+                        </div>
+                        <div class="jobs-preview" id="jobsPreviewList">
+                            <div class="no-data">Tidak ada pesanan baru.</div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </section>
+            
+            <section id="jobs" class="page">
+                <div class="page-header">
+                    <h2>Pesanan Baru (<span id="jobsCount">0</span>)</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="loadOrdersFromBackend()">🔄 Refresh</button>
+                    </div>
+                </div>
+                <div class="main-content">
+                    <div class="jobs-list" id="jobsList">
+                        <div class="no-data">Tidak ada pesanan baru saat ini.</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="active-delivery" class="page">
+                <div class="page-header">
+                    <h2>Pengiriman Aktif</h2>
+                </div>
+                <div class="main-content delivery-content">
+                    <div class="delivery-card" id="fullDeliveryCard">
+                        <div class="no-data">Anda tidak sedang dalam pengiriman aktif.</div>
+                    </div>
+                    <div class="delivery-actions" id="deliveryActions" style="display:none;">
+                        <button class="action-btn primary" onclick="completeDelivery()">✅ SELESAI PENGIRIMAN</button>
+                        <button class="action-btn secondary" onclick="showChatModal(courierState.activeDeliveries[0].id)">💬 CHAT CUSTOMER</button>
+                        <button class="action-btn secondary" onclick="showNotification('Simulasi rute ke tujuan', 'info')">🗺️ LIHAT RUTE GPS</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="earnings" class="page">
+                <div class="page-header">
+                    <h2>Penghasilan</h2>
+                </div>
+                <div class="main-content earnings-content">
+                    <div class="earnings-summary">
+                        <div class="summary-card total">
+                            <span class="summary-icon">💵</span>
+                            <div class="summary-content">
+                                <div class="summary-value" id="totalEarnings">Rp 0</div>
+                                <div class="summary-label">Total Penghasilan (Bulan Ini)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-title">Riwayat Transaksi</div>
+                    <div class="earnings-list" id="earningsList">
+                        <div class="no-data">Belum ada transaksi bulan ini.</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="history" class="page">
+                <div class="page-header">
+                    <h2>Riwayat</h2>
+                </div>
+                <div class="main-content history-content">
+                    <div class="filter-options">
+                        <select id="historyFilter">
+                            <option value="all">Semua</option>
+                            <option value="completed">Selesai</option>
+                            <option value="cancelled">Dibatalkan</option>
+                        </select>
+                    </div>
+                    <div class="history-list" id="historyList">
+                        <div class="no-data">Belum ada riwayat pekerjaan.</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="performance" class="page">
+                <div class="page-header">
+                    <h2>Performa</h2>
+                </div>
+                <div class="main-content performance-content">
+                    <div class="no-data">Fitur Performa sedang dikembangkan!</div>
+                </div>
+            </section>
+            
+            <section id="profile" class="page">
+                <div class="page-header">
+                    <h2>Profil</h2>
+                    <button class="edit-profile-btn" onclick="showNotification('Simulasi edit profil', 'info')">Edit Profil</button>
+                </div>
+                <div class="main-content profile-content">
+                    <div class="profile-card">
+                        <div class="profile-header">
+                            <div class="profile-avatar">🚴</div>
+                            <div class="profile-info">
+                                <h3>Kurir PasarKilat 001</h3>
+                                <p>ID Kurir: COU001</p>
+                                <p>Status: Aktif</p>
+                            </div>
+                        </div>
+                        <div class="profile-details">
+                            <p><strong>Email:</strong> kurir@pasarkilat.com</p>
+                            <p><strong>Telepon:</strong> +62 812-XXXX-XXXX</p>
+                            <p><strong>Bergabung:</strong> Januari 2024</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="settings" class="page">
+                <div class="page-header">
+                    <h2>Pengaturan</h2>
+                </div>
+                <div class="main-content settings-content">
+                    <div class="no-data">Pengaturan belum tersedia di versi ini.</div>
+                </div>
+            </section>
+            
+            <section id="help" class="page">
+                <div class="page-header">
+                    <h2>Bantuan & Support</h2>
+                </div>
+                <div class="main-content help-content">
+                    <div class="section-title">Hubungi Kami</div>
+                    <div class="contact-options">
+                        <button class="contact-btn" onclick="showNotification('Simulasi Call Support', 'info')">
+                            <span class="contact-icon">📞</span>
+                            <div class="contact-text">
+                                <div class="contact-title">Telepon Customer Service</div>
+                                <div class="contact-subtitle">Respons cepat untuk masalah mendesak</div>
+                            </div>
+                        </button>
+                        <button class="contact-btn" onclick="showNotification('Simulasi Chat Support', 'info')">
+                            <span class="contact-icon">💬</span>
+                            <div class="contact-text">
+                                <div class="contact-title">Live Chat Support</div>
+                                <div class="contact-subtitle">Bantuan melalui pesan dalam aplikasi</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+        
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" data-page="dashboard"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></a>
+            <a href="#" class="nav-item" data-page="jobs"><span class="nav-icon">📦</span><span class="nav-label">Jobs</span></a>
+            <a href="#" class="nav-item" data-page="active-delivery"><span class="nav-icon">📍</span><span class="nav-label">Antar</span></a>
+            <a href="#" class="nav-item" data-page="earnings"><span class="nav-icon">💰</span><span class="nav-label">Gaji</span></a>
+            <a href="#" class="nav-item" data-page="profile"><span class="nav-icon">👤</span><span class="nav-label">Saya</span></a>
+        </nav>
+
+        <div id="notificationContainer"></div>
+
+        <div class="modal-overlay" id="qrCodeModal">
+            <div class="modal-content">
+                <button class="close-modal" onclick="closeQRCodeModal()">✕</button>
+                <h3>Hubungkan WhatsApp</h3>
+                <p>Scan QR code di bawah ini menggunakan aplikasi WhatsApp Anda.</p>
+                <div class="qr-container">
+                    <img id="qrCodeImage" src="https://via.placeholder.com/256?text=LOADING+QR" alt="QR Code">
+                </div>
+                <div class="qr-status" id="qrStatusText">Menunggu QR Code dari server...</div>
+            </div>
+        </div>
+
+        <div class="chat-modal" id="chatModal">
+            <div class="chat-modal-content">
+                <div class="chat-header">
+                    <div class="chat-customer-info">
+                        <div class="chat-avatar">👤</div>
+                        <div class="chat-details">
+                            <div class="chat-name">Customer #<span id="chatJobId"></span></div>
+                            <div class="chat-status whatsapp-connected">Online</div>
+                        </div>
+                    </div>
+                    <button class="close-chat" onclick="closeChatModal()">✕</button>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message-item received">
+                        <div class="message-bubble">Halo kurir, paket saya sudah dekat?</div>
+                        <div class="message-footer">
+                            <span class="message-time">10:00</span>
+                        </div>
+                    </div>
+                    <div class="message-item sent">
+                        <div class="message-bubble">Selamat siang, ya sebentar lagi sampai. Saya sedang di jalan.</div>
+                        <div class="message-footer">
+                            <span class="message-time">10:02</span>
+                            <span class="message-status read">✓✓</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" placeholder="Ketik pesan..." id="chatInput">
+                    <button onclick="sendChatMessage()">Kirim</button>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="courier-app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initCourierApp();
+            connectWebSocket();
+            // Load orders dari backend (atau simulasi) setelah delay singkat
+            setTimeout(() => {
+                loadOrdersFromBackend();
+            }, 500); 
+            updateActiveDeliveryUI();
+        });
+    </script>
+</body>
+</html>
