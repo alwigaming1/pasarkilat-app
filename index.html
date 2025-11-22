@@ -299,36 +299,65 @@
 
         <div id="notificationContainer"></div>
 
-        </div>
-
-    <div id="qrCodeModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h2>Hubungkan WhatsApp</h2>
-            <p>Silakan **scan QR Code** di bawah ini dengan WhatsApp di ponsel Anda (menu "Linked Devices").</p>
-            <div id="qrcodeCanvas">
-                <canvas id="qrCanvas"></canvas> 
-                <p class="qr-status-text" id="qrStatusText">Menunggu QR Code...</p>
+        <div class="modal-overlay" id="qrCodeModal">
+            <div class="modal-content">
+                <button class="close-modal" onclick="closeQRCodeModal()">✕</button>
+                <h3>Hubungkan WhatsApp</h3>
+                <p>Scan QR code di bawah ini menggunakan aplikasi WhatsApp Anda.</p>
+                <div class="qr-container">
+                    <img id="qrCodeImage" src="https://via.placeholder.com/256?text=LOADING+QR" alt="QR Code">
+                </div>
+                <div class="qr-status" id="qrStatusText">Menunggu QR Code dari server...</div>
             </div>
-            <p class="small-text">Pastikan ponsel Anda terhubung ke internet. Data sesi akan disimpan di server.</p>
-            <button class="close-btn" onclick="hideQrModal()">Tutup</button>
         </div>
+
+        <div class="chat-modal" id="chatModal">
+            <div class="chat-modal-content">
+                <div class="chat-header">
+                    <div class="chat-customer-info">
+                        <div class="chat-avatar">👤</div>
+                        <div class="chat-details">
+                            <div class="chat-name">Customer #<span id="chatJobId"></span></div>
+                            <div class="chat-status whatsapp-connected">Online</div>
+                        </div>
+                    </div>
+                    <button class="close-chat" onclick="closeChatModal()">✕</button>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message-item received">
+                        <div class="message-bubble">Halo kurir, paket saya sudah dekat?</div>
+                        <div class="message-footer">
+                            <span class="message-time">10:00</span>
+                        </div>
+                    </div>
+                    <div class="message-item sent">
+                        <div class="message-bubble">Selamat siang, ya sebentar lagi sampai. Saya sedang di jalan.</div>
+                        <div class="message-footer">
+                            <span class="message-time">10:02</span>
+                            <span class="message-status read">✓✓</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" placeholder="Ketik pesan..." id="chatInput">
+                    <button onclick="sendChatMessage()">Kirim</button>
+                </div>
+            </div>
+        </div>
+        
     </div>
-    
-    ```
 
-### B. Script Imports (Di bagian akhir `index.html`, sebelum `</body>`)
-
-Pastikan Anda mengimpor library yang diperlukan:
-
-```html
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script> 
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="courier-app.js"></script>
-    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             initCourierApp();
-            connectWebSocket(); // Memanggil koneksi
+            connectWebSocket();
+            // Load orders dari backend (atau simulasi) setelah delay singkat
+            setTimeout(() => {
+                loadOrdersFromBackend();
+            }, 500); 
+            updateActiveDeliveryUI();
         });
     </script>
 </body>
