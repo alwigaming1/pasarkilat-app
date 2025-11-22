@@ -1,11 +1,11 @@
 // courier-app.js - VERSI LENGKAP DENGAN SIMULASI BACKEND SOCKET.IO/RAILWAY
 
-// HARUS ADA PREFIX https://
-const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app'; // <-- PASTIKAN GANTINYA SEPERTI INI!
+// GANTI DENGAN URL BACKEND ANDA DI RAILWAY YANG SUDAH JALAN (PASTIKAN MENGGUNAKAN https://)!
+// Contoh: 'https://nama-aplikasi-anda.up.railway.app'
+const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app'; // <--- GANTI INI!!!
 
 let socket = null;
 let whatsappStatus = 'disconnected';
-// ... sisa kode
 let courierState = {
     jobs: [], // Pesanan baru (belum diterima)
     history: [], // Riwayat (completed/cancelled)
@@ -464,7 +464,7 @@ function loadOrdersFromBackend() {
 
 function connectWebSocket() {
     // Pastikan URL sudah diganti sebelum koneksi
-    if (FREE_BACKEND_URL.includes('https://backend-production-e12e5.up.railway.app'')) {
+    if (FREE_BACKEND_URL.includes('https://backend-production-e12e5.up.railway.app')) {
         showNotification('❌ HARAP GANTI placeholder URL backend di courier-app.js dan index.html!', 'error');
         return;
     }
@@ -694,5 +694,4 @@ function sendChatMessage() {
         loadOrdersFromBackend();
     }, 500); 
     updateActiveDeliveryUI();
-
 }); */
