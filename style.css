@@ -1589,4 +1589,122 @@ input:checked + .slider:before {
 .small-text {
     font-size: 0.75rem;
     color: var(--text-muted);
+
+}
+
+/* style.css (Tambahan penting untuk Modal dan Chat) */
+
+/* MODAL OVERLAY (Untuk WA QR dan Chat) */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: var(--white);
+    padding: 30px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    max-width: 90%;
+    width: 350px;
+    text-align: center;
+}
+
+/* WA QR Code Modal Specific */
+#qrcodeCanvas {
+    padding: 20px;
+    background: var(--light-gray);
+    border-radius: var(--radius-sm);
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Chat Modal Specific */
+.chat-content {
+    width: 90%;
+    max-width: 450px;
+    height: 80vh;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    padding: 15px;
+    background: var(--primary-green);
+    color: var(--white);
+    text-align: left;
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+    position: relative;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    padding: 15px;
+    overflow-y: auto;
+    background: var(--light-gray);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-input-area {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid var(--medium-gray);
+    background: var(--white);
+    border-bottom-left-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+}
+
+/* Message Bubbles */
+.message-item {
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+}
+
+.message-item.sent {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.message-item.received {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.message-bubble {
+    padding: 8px 12px;
+    border-radius: 10px;
+    margin-bottom: 2px;
+}
+
+.message-item.sent .message-bubble {
+    background: var(--light-green);
+    color: var(--white);
+    border-bottom-right-radius: 2px;
+}
+
+.message-item.received .message-bubble {
+    background: var(--white);
+    border: 1px solid var(--medium-gray);
+    border-bottom-left-radius: 2px;
+}
+
+.message-status {
+    color: var(--secondary-blue); /* Ceklis biru WhatsApp */
 }
