@@ -1,11 +1,11 @@
 // courier-app.js - VERSI LENGKAP DENGAN SIMULASI BACKEND SOCKET.IO/RAILWAY
 
-// GANTI DENGAN URL BACKEND ANDA DI RAILWAY YANG SUDAH JALAN (PASTIKAN MENGGUNAKAN https://)!
-// Contoh: 'https://nama-aplikasi-anda.up.railway.app'
-const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app'; // <--- GANTI INI!!!
+// HARUS ADA PREFIX https://
+const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app'; // <-- PASTIKAN GANTINYA SEPERTI INI!
 
 let socket = null;
 let whatsappStatus = 'disconnected';
+// ... sisa kode
 let courierState = {
     jobs: [], // Pesanan baru (belum diterima)
     history: [], // Riwayat (completed/cancelled)
@@ -694,4 +694,5 @@ function sendChatMessage() {
         loadOrdersFromBackend();
     }, 500); 
     updateActiveDeliveryUI();
+
 }); */
