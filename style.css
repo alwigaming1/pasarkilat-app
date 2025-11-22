@@ -1589,7 +1589,6 @@ input:checked + .slider:before {
 .small-text {
     font-size: 0.75rem;
     color: var(--text-muted);
-
 }
 
 /* style.css (Tambahan penting untuk Modal dan Chat) */

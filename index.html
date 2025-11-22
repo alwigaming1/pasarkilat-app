@@ -323,14 +323,12 @@ Pastikan Anda mengimpor library yang diperlukan:
 ```html
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script> 
-    
     <script src="courier-app.js"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             initCourierApp();
-            connectWebSocket(); // Fungsi ini akan memicu koneksi WA di backend
-            // ... (Kode inisialisasi lainnya)
+            connectWebSocket(); // Memanggil koneksi
         });
     </script>
 </body>
