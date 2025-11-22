@@ -1,8 +1,8 @@
 // courier-app.js - VERSI LENGKAP DENGAN SIMULASI BACKEND SOCKET.IO/RAILWAY
 
-// GANTI DENGAN URL BACKEND ANDA DI RAILWAY YANG SUDAH JALAN!
+// GANTI DENGAN URL BACKEND ANDA DI RAILWAY YANG SUDAH JALAN (PASTIKAN MENGGUNAKAN https://)!
 // Contoh: 'https://nama-aplikasi-anda.up.railway.app'
-const FREE_BACKEND_URL = 'backend-production-e12e5.up.railway.app'; // <--- GANTI INI!!!
+const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app'; // <--- GANTI INI!!!
 
 let socket = null;
 let whatsappStatus = 'disconnected';
@@ -252,7 +252,7 @@ function updateActiveDeliveryUI() {
         activeDeliveryCard.style.display = 'block';
         document.getElementById('deliveryId').textContent = `#${activeDelivery.id}`;
         document.getElementById('deliveryAddress').textContent = activeDelivery.delivery.address.substring(0, 30) + '...';
-        
+
         // Update Full Delivery Page
         fullDeliveryCard.innerHTML = `
             <div class="delivery-header">
@@ -275,74 +275,90 @@ function updateActiveDeliveryUI() {
                     </div>
                 </div>
             </div>
-            <div class="delivery-metrics">
-                <div class="metric-item"><div class="metric-value">${activeDelivery.distance} km</div><div class="metric-label">Jarak</div></div>
-                <div class="metric-item"><div class="metric-value">${activeDelivery.estimate} min</div><div class="metric-label">Est. Waktu</div></div>
-                <div class="metric-item"><div class="metric-value">Rp ${activeDelivery.payment.toLocaleString('id-ID')}</div><div class="metric-label">Bayaran</div></div>
+            <div class="delivery-stats">
+                <div class="stat-item">
+                    <span>Jarak:</span> <strong>${activeDelivery.distance} km</strong>
+                </div>
+                <div class="stat-item">
+                    <span>Estimasi Selesai:</span> <strong>${activeDelivery.estimate} min</strong>
+                </div>
+                <div class="stat-item">
+                    <span>Pembayaran:</span> <strong>Rp ${activeDelivery.payment.toLocaleString('id-ID')}</strong>
+                </div>
             </div>
         `;
+        fullDeliveryCard.classList.remove('no-data');
+        
         deliveryActions.style.display = 'flex';
         
-        // Start Timer
-        updateActiveDeliveryTimer(); 
+        // Update Timer & Progress
+        const startedAt = activeDelivery.startedAt ? new Date(activeDelivery.startedAt) : new Date();
+        const duration = (new Date() - startedAt) / 1000;
+        
+        function updateActiveDeliveryTimer() {
+            const now = new Date();
+            const elapsed = Math.floor((now - startedAt) / 1000);
+            const hours = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+            const minutes = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+            const seconds = String(elapsed % 60).padStart(2, '0');
+            
+            if (timerElement) {
+                timerElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+
+            // Simulasi Progress Bar (random 10-90%)
+            const progressBar = document.getElementById('routeProgress');
+            const courierMarker = document.querySelector('.current-position');
+            if (progressBar) {
+                const randomProgress = Math.min(90, Math.max(10, Math.floor(Math.random() * 80) + 10)); // 10% to 90%
+                progressBar.style.width = `${randomProgress}%`;
+                courierMarker.style.left = `${randomProgress}%`;
+            }
+        }
+
         if (!window.deliveryTimerInterval) {
+            updateActiveDeliveryTimer(); 
             window.deliveryTimerInterval = setInterval(updateActiveDeliveryTimer, 1000);
         }
 
     } else {
-        // Hide UI elements if no active delivery
         activeDeliveryCard.style.display = 'none';
         fullDeliveryCard.innerHTML = '<div class="no-data">Anda tidak sedang dalam pengiriman aktif.</div>';
+        fullDeliveryCard.classList.add('no-data');
         deliveryActions.style.display = 'none';
+
         if (window.deliveryTimerInterval) {
             clearInterval(window.deliveryTimerInterval);
             window.deliveryTimerInterval = null;
         }
-        if (timerElement) timerElement.textContent = '00:00:00';
     }
 }
 
-// Fungsi Timer Pengiriman Aktif
-function updateActiveDeliveryTimer() {
-    const timerElement = document.getElementById('deliveryTimer');
+// Tombol Selesai Pengiriman
+function completeDelivery() {
+    if (courierState.activeDeliveries.length === 0) return;
+
+    const completedJob = courierState.activeDeliveries.shift();
+    completedJob.status = 'completed';
     
-    if (!timerElement || courierState.activeDeliveries.length === 0) {
-        if (window.deliveryTimerInterval) {
-            clearInterval(window.deliveryTimerInterval);
-            window.deliveryTimerInterval = null;
-        }
-        return;
+    courierState.balance += completedJob.payment;
+    const balanceElement = document.querySelector('.balance-amount');
+    if (balanceElement) {
+         balanceElement.textContent = `Rp ${courierState.balance.toLocaleString('id-ID')}`;
     }
 
-    const activeDelivery = courierState.activeDeliveries[0];
-    const elapsed = Math.floor((new Date() - new Date(activeDelivery.startedAt)) / 1000);
-    
-    const hours = String(Math.floor(elapsed / 3600)).padStart(2, '0');
-    const minutes = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
-    const seconds = String(elapsed % 60).padStart(2, '0');
+    // Kirim event ke backend
+    if (socket) socket.emit('job_completed', { jobId: completedJob.id, courierId: 'courier_001' });
 
-    timerElement.textContent = `${hours}:${minutes}:${seconds}`;
-
-    // Simulasi pergerakan di map (hanya di dashboard)
-    const courierMarker = document.querySelector('.current-position');
-    if (courierMarker) {
-        // Pindah dari 40% ke 80% dalam 100 detik (contoh simulasi)
-        const durationSec = 100;
-        const startPos = 40;
-        const endPos = 80;
-        let currentPos;
-
-        if (elapsed < durationSec) {
-             currentPos = startPos + (elapsed / durationSec) * (endPos - startPos);
-        } else {
-            currentPos = endPos; // Sampai di tujuan
-        }
-        courierMarker.style.left = `${currentPos}%`;
-    }
+    showNotification(`Pengiriman #${completedJob.id} Selesai! Saldo bertambah.`, 'success');
+    updateActiveDeliveryUI();
+    showPage('dashboard');
+    loadHistory(); // Refresh Riwayat
+    loadEarnings(); // Refresh Penghasilan
 }
 
 
-// --- MAIN LOGIC ---
+// --- MAIN LOGIC --- 
 
 // Fungsi untuk menerima job
 function acceptJob(jobId) {
@@ -350,24 +366,22 @@ function acceptJob(jobId) {
         showNotification('Anda sudah memiliki pengiriman aktif! Selesaikan dulu.', 'warning');
         return;
     }
-
     const jobIndex = courierState.jobs.findIndex(job => job.id === jobId);
     if (jobIndex === -1) {
         showNotification('Pesanan tidak ditemukan.', 'error');
         return;
     }
-
+    
     // Pindahkan job dari jobs ke activeDeliveries
     const job = courierState.jobs.splice(jobIndex, 1)[0];
     job.status = 'on_delivery';
     job.startedAt = new Date(); // Catat waktu mulai
     courierState.activeDeliveries.push(job);
-
+    
     // Kirim event ke backend (jika socket terhubung)
     if (socket) {
         socket.emit('job_accepted', { jobId: jobId, courierId: 'courier_001' });
     }
-
     showNotification(`Pesanan #${jobId} Diterima! Mulai pengiriman.`, 'success');
     updateBadges();
     loadJobs(); // Refresh daftar jobs
@@ -384,56 +398,29 @@ function rejectJob(jobId) {
     const job = courierState.jobs.splice(jobIndex, 1)[0];
     job.status = 'cancelled';
     courierState.history.push(job);
-
+    
     if (socket) {
         socket.emit('job_rejected', { jobId: jobId, courierId: 'courier_001' });
     }
-    
     showNotification(`Pesanan #${jobId} Ditolak.`, 'warning');
     updateBadges();
     loadJobs();
+    loadHistory(); // Refresh Riwayat
 }
 
-// Tombol Selesai Pengiriman
-function completeDelivery() {
-    if (courierState.activeDeliveries.length === 0) return;
-
-    const completedJob = courierState.activeDeliveries.shift();
-    completedJob.status = 'completed';
-    completedJob.completedAt = new Date(); // Catat waktu selesai
-    courierState.history.push(completedJob); // Masukkan ke riwayat
-    
-    // Update saldo
-    courierState.balance += completedJob.payment;
-    
-    // Kirim event ke backend (jika socket terhubung)
-    if (socket) {
-        socket.emit('job_completed', { jobId: completedJob.id, courierId: 'courier_001', payment: completedJob.payment });
-    }
-
-    showNotification(`Pengiriman #${completedJob.id} Selesai! Saldo bertambah +Rp ${completedJob.payment.toLocaleString('id-ID')}.`, 'success');
-    updateActiveDeliveryUI(); // Hapus tampilan pengiriman aktif
-    updateBadges(); // Update saldo di header
-    loadEarnings(); // Update halaman penghasilan
-    showPage('dashboard');
-}
-
-// Fungsi Simulasi Job (Untuk testing lokal atau saat backend disconnected)
+// Fungsi simulasi job baru (hanya berjalan saat offline/disconnected)
 function simulateNewJob(showNotif = true) {
     jobIdCounter++;
-    const newJobId = 'K' + jobIdCounter;
-    
+    const newJobId = 'SIM' + jobIdCounter; 
     const locations = [
-        { name: 'Toko Baju A', address: 'Jl. Riau No. 50, Bandung' },
-        { name: 'Warung Nasi Cepat Saji', address: 'Jl. Pemuda No. 101, Jakarta' },
-        { name: 'Rumah Sakit Bunda', address: 'Jl. Merdeka No. 5, Surabaya' },
-        { name: 'Gudang Logistik X', address: 'Jl. Raya Bekasi KM 20, Jakarta' },
-        { name: 'Mall ABC', address: 'Jl. Sudirman No. 99, Jakarta' },
+        { name: 'Toko Baju A', address: 'Jl. Riau No. 50' },
+        { name: 'Warung Cepat Saji', address: 'Jl. Pemuda No. 101' },
+        { name: 'Gudang Logistik X', address: 'Jl. Raya Bekasi KM 20' },
+        { name: 'Kantor Pusat', address: 'Jl. HR Rasuna Said' },
     ];
     
     const pickup = locations[Math.floor(Math.random() * locations.length)];
     const delivery = locations[Math.floor(Math.random() * locations.length)];
-    
     const payment = Math.floor(Math.random() * 80 + 30) * 1000; // 30k - 110k
 
     const newJob = {
@@ -450,18 +437,18 @@ function simulateNewJob(showNotif = true) {
     
     courierState.jobs.push(newJob);
     if (showNotif) {
-        showNotification(`Pesanan baru #${newJobId} tersedia!`, 'info');
+        showNotification(`Pesanan baru #${newJobId} tersedia! (Simulasi)`, 'info');
     }
 }
 
-// Fungsi untuk memuat data dari backend (Simulasi awal)
+// Fungsi untuk memuat data dari backend (atau simulasi)
 function loadOrdersFromBackend() {
     if (courierState.jobs.length === 0) {
         // Jika tidak ada koneksi backend, jalankan simulasi
         if (!socket || socket.disconnected) {
-             simulateNewJob(false);
-             simulateNewJob(false);
-             showNotification('Koneksi backend terputus, menggunakan data simulasi.', 'warning');
+            simulateNewJob(false);
+            simulateNewJob(false);
+            showNotification('Koneksi backend terputus, menggunakan data simulasi.', 'warning');
         } else {
             // Jika terhubung, minta data awal (simulasi di backend)
             socket.emit('request_initial_data', { courierId: 'courier_001' });
@@ -473,186 +460,68 @@ function loadOrdersFromBackend() {
     loadEarnings();
 }
 
-// --- NAVIGATION & UI HANDLERS ---
-
-function showPage(pageId) {
-    const pages = document.querySelectorAll('.page');
-    pages.forEach(page => page.classList.remove('active'));
-    
-    const activePage = document.getElementById(pageId);
-    if (activePage) {
-        activePage.classList.add('active');
-        
-        // Update nav item active status
-        document.querySelectorAll('.nav-item').forEach(item => {
-            if (item.getAttribute('data-page') === pageId) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
-        });
-        
-        // Refresh konten spesifik
-        if (pageId === 'jobs') loadJobs();
-        if (pageId === 'history') loadHistory();
-        if (pageId === 'earnings') loadEarnings();
-        if (pageId === 'active-delivery') updateActiveDeliveryUI();
-    }
-    closeSidebar();
-}
-
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    sidebar.classList.toggle('active');
-    overlay.classList.toggle('active');
-}
-
-function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('active');
-    document.getElementById('overlay').classList.remove('active');
-}
-
-function toggleOnlineMode(event) {
-    courierState.onlineMode = event.target.checked;
-    const statusText = document.querySelector('.header-left .status-text');
-    if (courierState.onlineMode) {
-        statusText.textContent = whatsappStatus === 'connected' ? 'Online' : 'Disconnected';
-        showNotification('Anda sekarang Aktif dan siap menerima pesanan!', 'success');
-        if (socket) socket.emit('go_online', { courierId: 'courier_001' });
-    } else {
-        statusText.textContent = 'Offline';
-        showNotification('Anda sekarang Offline. Pesanan baru tidak akan masuk.', 'warning');
-        if (socket) socket.emit('go_offline', { courierId: 'courier_001' });
-    }
-    updateWhatsAppStatusUI(whatsappStatus);
-}
-
-// Fungsi untuk inisialisasi semua event listener
-function initCourierApp() {
-    // Navigasi Sidebar
-    document.getElementById('menuBtn').addEventListener('click', toggleSidebar);
-    document.getElementById('closeSidebar').addEventListener('click', closeSidebar);
-    document.getElementById('overlay').addEventListener('click', closeSidebar);
-    
-    // Navigasi Pages
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            const pageId = this.getAttribute('data-page');
-            if (pageId) showPage(pageId);
-        });
-    });
-    
-    // Toggle Mode
-    document.getElementById('statusToggle').addEventListener('change', toggleOnlineMode);
-
-    // Filter History
-    const historyFilter = document.getElementById('historyFilter');
-    if (historyFilter) historyFilter.addEventListener('change', loadHistory);
-}
-
-// --- CHAT MODAL FUNCTIONS ---
-function showChatModal(jobId) {
-    const modal = document.getElementById('chatModal');
-    const jobIdEl = document.getElementById('chatJobId');
-    const chatMessagesEl = document.getElementById('chatMessages');
-
-    jobIdEl.textContent = jobId;
-    modal.classList.add('active');
-    modal.style.display = 'flex';
-    
-    // Scroll ke bawah saat chat dibuka
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-}
-
-function closeChatModal() {
-    document.getElementById('chatModal').classList.remove('active');
-    setTimeout(() => {
-        document.getElementById('chatModal').style.display = 'none';
-    }, 300);
-}
-
-function sendChatMessage() {
-    const input = document.getElementById('chatInput');
-    const message = input.value.trim();
-    if (!message) return;
-
-    const jobId = document.getElementById('chatJobId').textContent;
-    const chatMessagesEl = document.getElementById('chatMessages');
-
-    // 1. Tambahkan pesan ke UI (Simulasi)
-    const sentMessage = document.createElement('div');
-    sentMessage.className = 'message-item sent';
-    sentMessage.innerHTML = `
-        <div class="message-bubble">${message}</div>
-        <div class="message-footer">
-            <span class="message-time">${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-            <span class="message-status">✓</span>
-        </div>
-    `;
-    chatMessagesEl.appendChild(sentMessage);
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-
-    // 2. Kirim ke Backend (Jika terhubung)
-    if (socket) {
-        socket.emit('send_message', {
-            jobId: jobId,
-            sender: 'courier',
-            message: message
-        });
-    }
-
-    // 3. Bersihkan input
-    input.value = '';
-}
-
-
-// --- SOCKET.IO CONNECTION & HANDLERS ---
+// --- SOCKET.IO CONNECTION ---
 
 function connectWebSocket() {
-    if (FREE_BACKEND_URL.includes('your-app-name')) {
-        showNotification('❌ HARAP GANTI "your-app-name-ganti-ini.up.railway.app" di courier-app.js dengan URL Railway Anda yang sebenarnya!', 'error');
+    // Pastikan URL sudah diganti sebelum koneksi
+    if (FREE_BACKEND_URL.includes('https://backend-production-e12e5.up.railway.app'')) {
+        showNotification('❌ HARAP GANTI placeholder URL backend di courier-app.js dan index.html!', 'error');
         return;
     }
-
+    
     try {
-        // Inisialisasi koneksi Socket.IO
+        // Tambahkan transportasi 'websocket' eksplisit
         socket = io(FREE_BACKEND_URL, {
-            query: {
-                role: 'courier',
-                courierId: 'courier_001' // Ganti dengan ID Kurir yang sesungguhnya jika ada sistem login
-            }
+            query: { role: 'courier', courierId: 'courier_001' },
+            transports: ['websocket', 'polling'] 
         });
 
         socket.on('connect', () => {
-            console.log('✅ Connected to FREE backend');
-            showNotification('Koneksi ke server Railway berhasil!', 'success');
-            // Minta status WhatsApp saat koneksi
-            socket.emit('get_whatsapp_status', { courierId: 'courier_001' });
+            console.log('✅ Connected to FREE backend!');
+            showNotification('Koneksi backend berhasil!', 'success');
+            // Hentikan simulasi jika terhubung
+            if (simulatedJobInterval) {
+                clearInterval(simulatedJobInterval);
+                simulatedJobInterval = null;
+            }
+            // Minta status WA terbaru
+            socket.emit('get_whatsapp_status');
+            // Minta data job awal
+            loadOrdersFromBackend();
         });
 
-        // Handle new job available (dari backend)
+        // Handle event job baru dari backend (real-time)
         socket.on('new_job_available', (job) => {
-            console.log('📢 Pesanan baru diterima dari backend:', job);
             courierState.jobs.push(job);
             updateBadges();
+            loadJobs(); // Refresh UI
+            showNotification(`📢 Pesanan baru #${job.id} tersedia! (Rp ${job.payment.toLocaleString('id-ID')})`, 'info');
+        });
+        
+        // Handle data job awal dari backend
+        socket.on('initial_jobs', (jobs) => {
+             // Pastikan hanya menambahkan yang belum ada
+            jobs.forEach(job => {
+                if (!courierState.jobs.find(j => j.id === job.id)) {
+                    courierState.jobs.push(job);
+                }
+            });
+            updateBadges();
             loadJobs();
-            showNotification('Pesanan baru tersedia (via Backend)!', 'info');
         });
 
-        // Handle WhatsApp status
+
+        // Handle status WhatsApp dari backend
         socket.on('whatsapp_status', (data) => {
-            console.log('WhatsApp status:', data.status);
             updateWhatsAppStatusUI(data.status);
-            
-            if (data.status === 'connected') {
-                showNotification('WhatsApp Terhubung!', 'success');
-                closeQRCodeModal();
-            } else if (data.status === 'qr_received') {
-                showNotification('Scan QR Code untuk terhubung!', 'warning');
+            if (data.status === 'qr_received' && data.qr) {
                 showQRCodeModal(data.qr);
-            } else {
+                showNotification('Harap scan QR Code WhatsApp Anda.', 'warning');
+            } else if (data.status === 'connected') {
+                closeQRCodeModal();
+                showNotification('WhatsApp berhasil terhubung!', 'success');
+            } else if (data.status === 'disconnected') {
+                closeQRCodeModal();
                 showNotification('WhatsApp terputus: ' + data.status, 'error');
             }
         });
@@ -690,3 +559,139 @@ function connectWebSocket() {
         }
     }
 }
+
+// --- NAVIGATION & UI HANDLERS ---
+function showPage(pageId) {
+    const pages = document.querySelectorAll('.page');
+    pages.forEach(page => page.classList.remove('active'));
+    const activePage = document.getElementById(pageId);
+    if (activePage) {
+        activePage.classList.add('active');
+
+        // Update nav item active status
+        document.querySelectorAll('.nav-item').forEach(item => {
+            if (item.getAttribute('data-page') === pageId) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+
+        // Refresh konten spesifik
+        if (pageId === 'jobs') loadJobs();
+        if (pageId === 'history') loadHistory();
+        if (pageId === 'earnings') loadEarnings();
+        if (pageId === 'active-delivery') updateActiveDeliveryUI();
+    }
+}
+
+// Fungsi inisialisasi awal
+function initCourierApp() {
+    // Tombol menu sidebar
+    document.getElementById('menuBtn').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.add('active');
+        document.getElementById('overlay').classList.add('active');
+    });
+    document.getElementById('closeSidebar').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('active');
+        document.getElementById('overlay').classList.remove('active');
+    });
+    document.getElementById('overlay').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('active');
+        document.getElementById('overlay').classList.remove('active');
+    });
+
+    // Navigasi halaman
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const pageId = this.getAttribute('data-page');
+            showPage(pageId);
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        });
+    });
+
+    // Toggle status online/offline
+    document.getElementById('statusToggle').addEventListener('change', function() {
+        courierState.onlineMode = this.checked;
+        showNotification(`Mode ${this.checked ? 'Online' : 'Offline'}`, this.checked ? 'success' : 'warning');
+        updateWhatsAppStatusUI(whatsappStatus); // Refresh header status
+    });
+    
+    // Inisialisasi tampilan
+    updateBadges();
+    loadHistory(); 
+    loadEarnings();
+    updateActiveDeliveryUI(); 
+    
+    // Tambahkan container notifikasi jika belum ada
+    if (!document.getElementById('notificationContainer')) {
+        const container = document.createElement('div');
+        container.id = 'notificationContainer';
+        document.body.appendChild(container);
+    }
+}
+
+function showChatModal(jobId) {
+    const modal = document.getElementById('chatModal');
+    const jobIdEl = document.getElementById('chatJobId');
+    const chatMessagesEl = document.getElementById('chatMessages');
+    jobIdEl.textContent = jobId;
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    // Scroll ke bawah saat chat dibuka
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+}
+
+function closeChatModal() {
+    document.getElementById('chatModal').classList.remove('active');
+    setTimeout(() => {
+        document.getElementById('chatModal').style.display = 'none';
+    }, 300);
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    const jobId = document.getElementById('chatJobId').textContent;
+    const chatMessagesEl = document.getElementById('chatMessages');
+
+    // 1. Tambahkan pesan ke UI (Simulasi)
+    const sentMessage = document.createElement('div');
+    sentMessage.className = 'message-item sent';
+    sentMessage.innerHTML = `
+        <div class="message-bubble">${message}</div>
+        <div class="message-footer">
+            <span class="message-time">${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span class="message-status read">✓✓</span>
+        </div>
+    `;
+    chatMessagesEl.appendChild(sentMessage);
+
+    // 2. Kirim ke backend (Socket.IO)
+    if (socket) {
+        socket.emit('send_message', {
+            jobId: jobId,
+            sender: 'courier_001',
+            message: message
+        });
+    }
+
+    // 3. Bersihkan input dan scroll ke bawah
+    input.value = '';
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+}
+
+// Anda bisa menghapus baris di bawah karena sudah ada di index.html:
+/* document.addEventListener('DOMContentLoaded', function() {
+    initCourierApp();
+    connectWebSocket();
+    // Load orders dari backend (atau simulasi) setelah delay singkat
+    setTimeout(() => {
+        loadOrdersFromBackend();
+    }, 500); 
+    updateActiveDeliveryUI();
+}); */
