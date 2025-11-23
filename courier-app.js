@@ -626,15 +626,26 @@ function addMessageToChat(jobId, messageData) {
 function setupChatSocketListeners() {
     if (!socket) return;
     
+    // Hapus listener lama untuk menghindari duplikasi
+    socket.off('new_message');
+    socket.off('message_sent');
+    socket.off('chat_history');
+    
     socket.on('new_message', (data) => {
         console.log('📨 Pesan baru dari server:', data);
         
-        if (data.jobId && data.message) {
-            addMessageToChat(data.jobId, data.message);
+        // PERBAIKAN: Handle struktur data yang konsisten
+        if (data && data.jobId && data.message) {
+            const messageData = data.message;
+            console.log(`💬 Memproses pesan untuk job ${data.jobId}:`, messageData);
+            
+            addMessageToChat(data.jobId, messageData);
             
             if (currentChatJobId !== data.jobId) {
                 showNotification(`Pesan baru dari Customer #${data.jobId}`, 'info');
             }
+        } else {
+            console.error('❌ Struktur data new_message tidak valid:', data);
         }
     });
     
@@ -656,6 +667,11 @@ function setupChatSocketListeners() {
                 loadChatMessages(data.jobId);
             }
         }
+    });
+
+    // Debug: Log semua event socket untuk troubleshooting
+    socket.onAny((eventName, ...args) => {
+        console.log(`🔍 Socket Event: ${eventName}`, args);
     });
 }
 
@@ -702,6 +718,9 @@ function connectWebSocket() {
             socket.emit('get_whatsapp_status');
             // Meminta data jobs saat terkoneksi
             socket.emit('request_initial_data', { courierId: 'courier_001' });
+            
+            // Setup chat listeners setelah terkoneksi
+            setupChatSocketListeners();
         });
 
         socket.on('initial_jobs', (jobs) => {
