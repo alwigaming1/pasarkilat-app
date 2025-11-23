@@ -72,99 +72,324 @@
 
         <main class="app-pages">
             
+            <!-- Dashboard Section -->
             <section id="dashboard" class="page active">
                 <div class="main-content">
-                    <div class="stats-section">
+                    <!-- Welcome Section -->
+                    <div class="welcome-section">
+                        <div class="welcome-content">
+                            <div class="greeting">
+                                <h1>Selamat Siang, <span class="user-name">Kurir 001</span>! 👋</h1>
+                                <p class="date-display" id="currentDate">Minggu, 15 Desember 2024</p>
+                            </div>
+                            <div class="weather-info">
+                                <div class="weather-icon">☀️</div>
+                                <div class="weather-details">
+                                    <div class="weather-temp">32°C</div>
+                                    <div class="weather-location">Jakarta</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="quick-stats-section">
                         <div class="section-title">Ringkasan Hari Ini</div>
                         <div class="stats-grid">
                             <div class="stat-card">
                                 <div class="stat-content">
-                                    <span class="stat-icon">✅</span>
+                                    <div class="stat-icon-container">
+                                        <span class="stat-icon">✅</span>
+                                    </div>
                                     <div class="stat-details">
-                                        <div class="stat-value" id="statsCompleted">0</div>
+                                        <div class="stat-value" id="statsCompleted">12</div>
                                         <div class="stat-label">Selesai</div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-content">
-                                    <span class="stat-icon">⭐</span>
-                                    <div class="stat-details">
-                                        <div class="stat-value" id="statsRating">5.0</div>
-                                        <div class="stat-label">Rating</div>
+                                <div class="stat-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: 80%"></div>
                                     </div>
+                                    <div class="progress-text">80% target</div>
                                 </div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-content">
-                                    <span class="stat-icon">⏱️</span>
+                                    <div class="stat-icon-container">
+                                        <span class="stat-icon">⭐</span>
+                                    </div>
                                     <div class="stat-details">
-                                        <div class="stat-value" id="statsOnlineTime">0h</div>
+                                        <div class="stat-value" id="statsRating">4.9</div>
+                                        <div class="stat-label">Rating</div>
+                                    </div>
+                                </div>
+                                <div class="rating-stars">
+                                    <span class="star">★</span>
+                                    <span class="star">★</span>
+                                    <span class="star">★</span>
+                                    <span class="star">★</span>
+                                    <span class="star half">★</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-content">
+                                    <div class="stat-icon-container">
+                                        <span class="stat-icon">⏱️</span>
+                                    </div>
+                                    <div class="stat-details">
+                                        <div class="stat-value" id="statsOnlineTime">5h 42m</div>
                                         <div class="stat-label">Waktu Online</div>
                                     </div>
+                                </div>
+                                <div class="online-indicator">
+                                    <div class="pulse-dot"></div>
+                                    <span class="online-text">Online</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-content">
+                                    <div class="stat-icon-container">
+                                        <span class="stat-icon">💰</span>
+                                    </div>
+                                    <div class="stat-details">
+                                        <div class="stat-value" id="statsEarnings">Rp 420K</div>
+                                        <div class="stat-label">Penghasilan</div>
+                                    </div>
+                                </div>
+                                <div class="earnings-trend">
+                                    <span class="trend-up">↑ 12%</span>
+                                    <span class="trend-text">dari kemarin</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Active Delivery Section -->
                     <div class="delivery-preview-section" id="activeDeliveryCard" style="display:none;">
                         <div class="section-header">
                             <div class="section-title">Pengiriman Aktif</div>
-                            <span class="timer-display" id="deliveryTimer">00:00:00</span>
+                            <div class="delivery-status">
+                                <span class="timer-display" id="deliveryTimer">00:25:18</span>
+                                <span class="status-badge on-time">TEPAT WAKTU</span>
+                            </div>
                         </div>
-                        <div class="delivery-preview-card">
-                            <div class="route-map-placeholder">
-                                <div class="route-line"></div>
-                                <div class="route-point start">
-                                    <div class="point-marker start"></div>
-                                    <div class="point-label">Pickup</div>
+                        <div class="delivery-preview-card active">
+                            <div class="delivery-header">
+                                <div class="delivery-id">#ORD1001</div>
+                                <div class="priority-badge urgent">URGENT</div>
+                            </div>
+                            
+                            <div class="route-visualization">
+                                <div class="route-line">
+                                    <div class="route-progress" id="routeProgress" style="width: 65%"></div>
                                 </div>
-                                <div class="route-point end">
-                                    <div class="point-marker end"></div>
-                                    <div class="point-label">Tujuan</div>
+                                <div class="route-points">
+                                    <div class="route-point start active">
+                                        <div class="point-marker">
+                                            <span class="marker-icon">🏪</span>
+                                        </div>
+                                        <div class="point-info">
+                                            <div class="point-label">Pickup</div>
+                                            <div class="point-address">Toko Serba Ada</div>
+                                        </div>
+                                    </div>
+                                    <div class="route-point end">
+                                        <div class="point-marker">
+                                            <span class="marker-icon">🏠</span>
+                                        </div>
+                                        <div class="point-info">
+                                            <div class="point-label">Tujuan</div>
+                                            <div class="point-address">Jl. Sudirman No. 123</div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="current-position">
                                     <div class="courier-marker">
                                         <span class="marker-icon">🛵</span>
+                                        <div class="pulse-ring"></div>
                                     </div>
-                                    <div class="point-label">Anda</div>
+                                    <div class="position-label">Posisi Anda</div>
                                 </div>
                             </div>
-                            <div class="delivery-details-grid">
-                                <div class="stat"><span class="label">ID:</span> <span class="value" id="deliveryId">#1001</span></div>
-                                <div class="stat"><span class="label">Tujuan:</span> <span class="value" id="deliveryAddress">Jl. Sudirman No. 123</span></div>
+                            
+                            <div class="delivery-details">
+                                <div class="detail-row">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Jarak Tersisa</span>
+                                        <span class="detail-value">1.2 km</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Estimasi</span>
+                                        <span class="detail-value">8 menit</span>
+                                    </div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Pembayaran</span>
+                                        <span class="detail-value highlight">Rp 45.000</span>
+                                    </div>
+                                </div>
                             </div>
-                            <button class="view-delivery-btn" onclick="showPage('active-delivery')">LIHAT DETAIL & SELESAI</button>
+                            
+                            <div class="delivery-actions">
+                                <button class="action-btn primary" onclick="showPage('active-delivery')">
+                                    <span class="btn-icon">📍</span>
+                                    LIHAT DETAIL
+                                </button>
+                                <button class="action-btn secondary" onclick="showChatModal('ORD1001')">
+                                    <span class="btn-icon">💬</span>
+                                    CHAT
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    
+
+                    <!-- Quick Actions -->
+                    <div class="quick-actions-section">
+                        <div class="section-header">
+                            <div class="section-title">Aksi Cepat</div>
+                        </div>
+                        <div class="actions-grid">
+                            <div class="action-card" onclick="loadOrdersFromBackend()">
+                                <div class="action-icon refresh">🔄</div>
+                                <div class="action-text">Refresh Pesanan</div>
+                            </div>
+                            <div class="action-card" onclick="showNotification('Fitur sedang dikembangkan', 'info')">
+                                <div class="action-icon map">🗺️</div>
+                                <div class="action-text">Lihat Peta</div>
+                            </div>
+                            <div class="action-card" onclick="showNotification('Fitur sedang dikembangkan', 'info')">
+                                <div class="action-icon earnings">💰</div>
+                                <div class="action-text">Cek Penghasilan</div>
+                            </div>
+                            <div class="action-card" onclick="showNotification('Fitur sedang dikembangan', 'info')">
+                                <div class="action-icon support">🆘</div>
+                                <div class="action-text">Bantuan</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- New Jobs Preview -->
                     <div class="jobs-preview-section">
                         <div class="section-header">
                             <div class="section-title">Pesanan Baru</div>
-                            <a href="#" class="see-all" onclick="showPage('jobs'); return false;">Lihat Semua</a>
+                            <a href="#" class="see-all" onclick="showPage('jobs'); return false;">
+                                Lihat Semua
+                                <span class="badge" id="jobsBadge">3</span>
+                            </a>
                         </div>
                         <div class="jobs-preview" id="jobsPreviewList">
-                            <div class="no-data">Tidak ada pesanan baru.</div>
+                            <div class="job-preview-card urgent">
+                                <div class="job-preview-header">
+                                    <div class="job-meta">
+                                        <span class="job-preview-id">#ORD1005</span>
+                                        <span class="job-time">5 menit lalu</span>
+                                    </div>
+                                    <span class="job-preview-badge urgent">URGENT</span>
+                                </div>
+                                <div class="job-preview-route">
+                                    <div class="route-from">
+                                        <span class="route-icon">🏪</span>
+                                        <span class="route-text">Restoran Cepat Saji</span>
+                                    </div>
+                                    <span class="route-arrow">→</span>
+                                    <div class="route-to">
+                                        <span class="route-icon">🏠</span>
+                                        <span class="route-text">Apartemen Green Park</span>
+                                    </div>
+                                </div>
+                                <div class="job-preview-details">
+                                    <div class="detail">
+                                        <span class="detail-label">Jarak:</span>
+                                        <span class="detail-value">2.3 km</span>
+                                    </div>
+                                    <div class="detail">
+                                        <span class="detail-label">Estimasi:</span>
+                                        <span class="detail-value">15 menit</span>
+                                    </div>
+                                </div>
+                                <div class="job-preview-footer">
+                                    <span class="job-preview-price">Rp 38.000</span>
+                                    <button class="view-job-btn" onclick="showPage('jobs')">Ambil</button>
+                                </div>
+                            </div>
+                            
+                            <div class="job-preview-card">
+                                <div class="job-preview-header">
+                                    <div class="job-meta">
+                                        <span class="job-preview-id">#ORD1004</span>
+                                        <span class="job-time">12 menit lalu</span>
+                                    </div>
+                                    <span class="job-preview-badge">STANDARD</span>
+                                </div>
+                                <div class="job-preview-route">
+                                    <div class="route-from">
+                                        <span class="route-icon">🏪</span>
+                                        <span class="route-text">Toko Baju A</span>
+                                    </div>
+                                    <span class="route-arrow">→</span>
+                                    <div class="route-to">
+                                        <span class="route-icon">🏠</span>
+                                        <span class="route-text">Perumahan Taman Asri</span>
+                                    </div>
+                                </div>
+                                <div class="job-preview-details">
+                                    <div class="detail">
+                                        <span class="detail-label">Jarak:</span>
+                                        <span class="detail-value">4.1 km</span>
+                                    </div>
+                                    <div class="detail">
+                                        <span class="detail-label">Estimasi:</span>
+                                        <span class="detail-value">22 menit</span>
+                                    </div>
+                                </div>
+                                <div class="job-preview-footer">
+                                    <span class="job-preview-price">Rp 52.000</span>
+                                    <button class="view-job-btn" onclick="showPage('jobs')">Ambil</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
+                    <!-- Performance Insights -->
+                    <div class="performance-insights">
+                        <div class="section-header">
+                            <div class="section-title">Insight Performa</div>
+                        </div>
+                        <div class="insights-grid">
+                            <div class="insight-card">
+                                <div class="insight-icon">🚀</div>
+                                <div class="insight-content">
+                                    <div class="insight-title">Performa Terbaik</div>
+                                    <div class="insight-desc">Rating 5.0 dalam 7 hari terakhir</div>
+                                </div>
+                            </div>
+                            <div class="insight-card">
+                                <div class="insight-icon">🎯</div>
+                                <div class="insight-content">
+                                    <div class="insight-title">Target Harian</div>
+                                    <div class="insight-desc">15/20 pengiriman terselesaikan</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
             
+            <!-- Jobs Section -->
             <section id="jobs" class="page">
                 <div class="page-header">
-                    <h2>Pesanan Baru (<span id="jobsCount">0</span>)</h2>
-                    <div class="header-actions">
-                        <button class="btn btn-primary" onclick="loadOrdersFromBackend()">🔄 Refresh</button>
-                    </div>
+                    <h2>Pesanan Baru</h2>
+                    <div class="jobs-count" id="jobsCount">0 pesanan</div>
                 </div>
                 <div class="main-content">
                     <div class="jobs-list" id="jobsList">
-                        <div class="no-data">Tidak ada pesanan baru saat ini.</div>
+                        <!-- Jobs will be loaded here -->
                     </div>
                 </div>
             </section>
 
+            <!-- Active Delivery Section -->
             <section id="active-delivery" class="page">
                 <div class="page-header">
                     <h2>Pengiriman Aktif</h2>
@@ -173,86 +398,175 @@
                     <div class="delivery-card" id="fullDeliveryCard">
                         <div class="no-data">Anda tidak sedang dalam pengiriman aktif.</div>
                     </div>
-                    <div class="delivery-actions" id="deliveryActions" style="display:none;">
-                        <button class="action-btn primary" onclick="completeDelivery()">✅ SELESAI PENGIRIMAN</button>
-                        <button class="action-btn secondary" onclick="showChatModal(courierState.activeDeliveries[0].id)">💬 CHAT CUSTOMER</button>
-                        <button class="action-btn secondary" onclick="showNotification('Simulasi rute ke tujuan', 'info')">🗺️ LIHAT RUTE GPS</button>
+                    <div class="delivery-actions" id="deliveryActions" style="display: none;">
+                        <button class="action-btn primary" onclick="completeDelivery()">
+                            <span class="btn-icon">✅</span>
+                            SELESAIKAN PENGIRIMAN
+                        </button>
+                        <button class="action-btn secondary" onclick="showChatModal(currentChatJobId || 'ORD1001')">
+                            <span class="btn-icon">💬</span>
+                            CHAT CUSTOMER
+                        </button>
                     </div>
                 </div>
             </section>
 
+            <!-- Earnings Section -->
             <section id="earnings" class="page">
                 <div class="page-header">
                     <h2>Penghasilan</h2>
                 </div>
                 <div class="main-content earnings-content">
                     <div class="earnings-summary">
-                        <div class="summary-card total">
-                            <span class="summary-icon">💵</span>
+                        <div class="summary-card">
+                            <div class="summary-icon">💰</div>
                             <div class="summary-content">
                                 <div class="summary-value" id="totalEarnings">Rp 0</div>
-                                <div class="summary-label">Total Penghasilan (Bulan Ini)</div>
+                                <div class="summary-label">Total Penghasilan Bulan Ini</div>
                             </div>
                         </div>
                     </div>
-                    <div class="section-title">Riwayat Transaksi</div>
+                    <div class="section-title">Riwayat Penghasilan</div>
                     <div class="earnings-list" id="earningsList">
-                        <div class="no-data">Belum ada transaksi bulan ini.</div>
+                        <!-- Earnings will be loaded here -->
                     </div>
                 </div>
             </section>
 
+            <!-- History Section -->
             <section id="history" class="page">
                 <div class="page-header">
-                    <h2>Riwayat</h2>
+                    <h2>Riwayat Pengiriman</h2>
                 </div>
                 <div class="main-content history-content">
                     <div class="filter-options">
-                        <select id="historyFilter">
-                            <option value="all">Semua</option>
+                        <select id="historyFilter" onchange="loadHistory()">
+                            <option value="all">Semua Status</option>
                             <option value="completed">Selesai</option>
                             <option value="cancelled">Dibatalkan</option>
                         </select>
                     </div>
                     <div class="history-list" id="historyList">
-                        <div class="no-data">Belum ada riwayat pekerjaan.</div>
+                        <!-- History will be loaded here -->
                     </div>
                 </div>
             </section>
 
+            <!-- Performance Section -->
             <section id="performance" class="page">
                 <div class="page-header">
                     <h2>Performa</h2>
                 </div>
-                <div class="main-content performance-content">
-                    <div class="no-data">Fitur Performa sedang dikembangkan!</div>
+                <div class="main-content">
+                    <div class="no-data">Fitur performa sedang dalam pengembangan.</div>
                 </div>
             </section>
             
+            <!-- Profile Section -->
             <section id="profile" class="page">
                 <div class="page-header">
-                    <h2>Profil</h2>
+                    <h2>Profil Saya</h2>
                     <button class="edit-profile-btn" onclick="showNotification('Simulasi edit profil', 'info')">Edit Profil</button>
                 </div>
                 <div class="main-content profile-content">
                     <div class="profile-card">
                         <div class="profile-header">
-                            <div class="profile-avatar">🚴</div>
+                            <div class="profile-avatar-container">
+                                <div class="profile-avatar">🚴</div>
+                                <div class="profile-badge">⭐ Premium</div>
+                            </div>
                             <div class="profile-info">
                                 <h3>Kurir PasarKilat 001</h3>
-                                <p>ID Kurir: COU001</p>
-                                <p>Status: Aktif</p>
+                                <p class="profile-id">ID: COU001</p>
+                                <div class="status-indicator">
+                                    <div class="status-dot online"></div>
+                                    <span class="status-text">Aktif</span>
+                                </div>
                             </div>
                         </div>
+                        
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">4.9</div>
+                                <div class="stat-label">Rating</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">1,234</div>
+                                <div class="stat-label">Pengiriman</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">98%</div>
+                                <div class="stat-label">Kepuasan</div>
+                            </div>
+                        </div>
+                        
                         <div class="profile-details">
-                            <p><strong>Email:</strong> kurir@pasarkilat.com</p>
-                            <p><strong>Telepon:</strong> +62 812-XXXX-XXXX</p>
-                            <p><strong>Bergabung:</strong> Januari 2024</p>
+                            <div class="detail-section">
+                                <h4 class="section-title">Informasi Pribadi</h4>
+                                <div class="detail-item">
+                                    <span class="detail-icon">📧</span>
+                                    <div class="detail-content">
+                                        <div class="detail-label">Email</div>
+                                        <div class="detail-value">kurir@pasarkilat.com</div>
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-icon">📱</span>
+                                    <div class="detail-content">
+                                        <div class="detail-label">Telepon</div>
+                                        <div class="detail-value">+62 812-3456-7890</div>
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-icon">📍</span>
+                                    <div class="detail-content">
+                                        <div class="detail-label">Wilayah</div>
+                                        <div class="detail-value">Jakarta Pusat</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h4 class="section-title">Informasi Akun</h4>
+                                <div class="detail-item">
+                                    <span class="detail-icon">📅</span>
+                                    <div class="detail-content">
+                                        <div class="detail-label">Bergabung</div>
+                                        <div class="detail-value">15 Januari 2024</div>
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-icon">🛵</span>
+                                    <div class="detail-content">
+                                        <div class="detail-label">Kendaraan</div>
+                                        <div class="detail-value">Motor Matic</div>
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-icon">⏱️</span>
+                                    <div class="detail-content">
+                                        <div class="detail-label">Waktu Online</div>
+                                        <div class="detail-value">156 jam</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-actions">
+                            <button class="action-btn primary" onclick="showNotification('Simulasi ganti foto', 'info')">
+                                <span class="btn-icon">📷</span>
+                                Ganti Foto Profil
+                            </button>
+                            <button class="action-btn secondary" onclick="showNotification('Simulasi verifikasi', 'info')">
+                                <span class="btn-icon">✅</span>
+                                Verifikasi Akun
+                            </button>
                         </div>
                     </div>
                 </div>
             </section>
             
+            <!-- Settings Section -->
             <section id="settings" class="page">
                 <div class="page-header">
                     <h2>Pengaturan</h2>
@@ -262,6 +576,7 @@
                 </div>
             </section>
             
+            <!-- Help Section -->
             <section id="help" class="page">
                 <div class="page-header">
                     <h2>Bantuan & Support</h2>
@@ -289,6 +604,7 @@
 
         </main>
         
+        <!-- Bottom Navigation -->
         <nav class="bottom-nav">
             <a href="#" class="nav-item active" data-page="dashboard"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></a>
             <a href="#" class="nav-item" data-page="jobs"><span class="nav-icon">📦</span><span class="nav-label">Jobs</span></a>
@@ -297,8 +613,10 @@
             <a href="#" class="nav-item" data-page="profile"><span class="nav-icon">👤</span><span class="nav-label">Saya</span></a>
         </nav>
 
+        <!-- Notification Container -->
         <div id="notificationContainer"></div>
 
+        <!-- QR Code Modal -->
         <div class="modal-overlay" id="qrCodeModal">
             <div class="modal-content">
                 <button class="close-modal" onclick="closeQRCodeModal()">✕</button>
@@ -311,6 +629,7 @@
             </div>
         </div>
 
+        <!-- Chat Modal -->
         <div class="chat-modal" id="chatModal">
             <div class="chat-modal-content">
                 <div class="chat-header">
@@ -347,6 +666,7 @@
         
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="courier-app.js"></script>
     <script>

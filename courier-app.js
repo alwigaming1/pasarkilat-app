@@ -1,6 +1,5 @@
-// courier-app.js - VERSI DIPERBAIKI DENGAN SISTEM CHAT FUNGSIONAL
+// courier-app.js - VERSI DIPERBAIKI DENGAN BACKEND STABIL
 
-// GANTI DENGAN URL BACKEND ANDA DI RAILWAY YANG SUDAH JALAN!
 const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app';
 
 let socket = null;
@@ -14,6 +13,8 @@ let courierState = {
 };
 let jobIdCounter = 1000;
 let simulatedJobInterval = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 // === VARIABLES UNTUK CHAT ===
 let currentChatJobId = null;
@@ -48,27 +49,31 @@ function updateWhatsAppStatusUI(status) {
     whatsappStatus = status;
     statusElement.textContent = `WhatsApp: ${status.toUpperCase().replace('_', ' ')}`;
     
-    dotElement.className = 'status-dot';
-    if (status === 'connected') {
-        dotElement.classList.add('online');
-    } else if (status === 'qr_received' || status === 'connecting') {
-        dotElement.classList.add('warning');
-    } else {
-        dotElement.classList.add('offline');
+    if (dotElement) {
+        dotElement.className = 'status-dot';
+        if (status === 'connected') {
+            dotElement.classList.add('online');
+        } else if (status === 'qr_received' || status === 'connecting') {
+            dotElement.classList.add('warning');
+        } else {
+            dotElement.classList.add('offline');
+        }
     }
 
-    headerDotElement.className = 'status-dot';
-    if (courierState.onlineMode) {
-        if (status === 'connected') {
-            headerDotElement.classList.add('online');
-            headerTextElement.textContent = 'Online';
+    if (headerDotElement && headerTextElement) {
+        headerDotElement.className = 'status-dot';
+        if (courierState.onlineMode) {
+            if (status === 'connected') {
+                headerDotElement.classList.add('online');
+                headerTextElement.textContent = 'Online';
+            } else {
+                headerDotElement.classList.add('warning');
+                headerTextElement.textContent = 'Disconnected';
+            }
         } else {
-            headerDotElement.classList.add('warning');
-            headerTextElement.textContent = 'Disconnected';
+            headerDotElement.classList.add('offline');
+            headerTextElement.textContent = 'Offline';
         }
-    } else {
-        headerDotElement.classList.add('offline');
-        headerTextElement.textContent = 'Offline';
     }
 }
 
@@ -84,22 +89,33 @@ function showQRCodeModal(qrData) {
 }
 
 function closeQRCodeModal() {
-    document.getElementById('qrCodeModal').style.display = 'none';
+    const modal = document.getElementById('qrCodeModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
 }
 
 function updateBadges() {
     const jobCount = courierState.jobs.length;
+    // Update badge di sidebar
     const badgeElementSidebar = document.querySelector('.sidebar-nav .nav-item[data-page="jobs"] .nav-badge');
+    // Update badge di dashboard (lihat semua)
+    const badgeElementDashboard = document.getElementById('jobsBadge');
+    // Update jobs count di halaman jobs
     const jobsCountElement = document.getElementById('jobsCount');
     
     if (badgeElementSidebar) {
         badgeElementSidebar.textContent = jobCount;
         badgeElementSidebar.style.display = jobCount > 0 ? 'flex' : 'none';
     }
+    if (badgeElementDashboard) {
+        badgeElementDashboard.textContent = jobCount;
+    }
     if (jobsCountElement) {
         jobsCountElement.textContent = jobCount;
     }
     
+    // Update balance
     const balanceElement = document.querySelector('.balance-amount');
     if (balanceElement) {
          balanceElement.textContent = `Rp ${courierState.balance.toLocaleString('id-ID')}`;
@@ -111,18 +127,22 @@ function loadJobs() {
     const jobsPreviewList = document.getElementById('jobsPreviewList');
     if (!jobsList || !jobsPreviewList) return;
     
+    // Kosongkan list
     jobsList.innerHTML = '';
     jobsPreviewList.innerHTML = '';
 
-    const sortedJobs = [...courierState.jobs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    if (sortedJobs.length === 0) {
+    // Jika tidak ada jobs
+    if (courierState.jobs.length === 0) {
         jobsList.innerHTML = '<div class="no-data">Tidak ada pesanan baru saat ini.</div>';
         jobsPreviewList.innerHTML = '<div class="no-data">Tidak ada pesanan baru.</div>';
         return;
     }
 
-    sortedJobs.forEach((job, index) => {
+    // Urutkan jobs berdasarkan waktu (terbaru pertama)
+    const sortedJobs = [...courierState.jobs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Isi jobsList (halaman jobs)
+    sortedJobs.forEach(job => {
         const jobItem = document.createElement('div');
         jobItem.className = 'job-item';
         jobItem.innerHTML = `
@@ -141,27 +161,47 @@ function loadJobs() {
             </div>
         `;
         jobsList.appendChild(jobItem);
+    });
 
-        if (index < 2) {
-            const previewCard = document.createElement('div');
-            previewCard.className = `job-preview-card ${job.payment > 50000 ? 'urgent' : ''}`;
-            previewCard.innerHTML = `
-                <div class="job-preview-header">
+    // Isi jobsPreviewList (halaman dashboard) - maksimal 2
+    sortedJobs.slice(0, 2).forEach(job => {
+        const previewCard = document.createElement('div');
+        previewCard.className = `job-preview-card ${job.priority === 'urgent' ? 'urgent' : ''}`;
+        previewCard.innerHTML = `
+            <div class="job-preview-header">
+                <div class="job-meta">
                     <span class="job-preview-id">#${job.id}</span>
-                    <span class="job-preview-badge">BARU</span>
+                    <span class="job-time">${new Date(job.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                <div class="job-preview-route">
-                    <span class="job-preview-from">${job.pickup.name}</span>
-                    <span class="job-preview-arrow">→</span>
-                    <span class="job-preview-to">${job.delivery.name}</span>
+                <span class="job-preview-badge ${job.priority === 'urgent' ? 'urgent' : ''}">${job.priority === 'urgent' ? 'URGENT' : 'STANDARD'}</span>
+            </div>
+            <div class="job-preview-route">
+                <div class="route-from">
+                    <span class="route-icon">🏪</span>
+                    <span class="route-text">${job.pickup.name}</span>
                 </div>
-                <div class="job-preview-footer">
-                    <span class="job-preview-price">Rp ${job.payment.toLocaleString('id-ID')}</span>
-                    <button class="view-job-btn" onclick="showPage('jobs');">Lihat Detail</button>
+                <span class="route-arrow">→</span>
+                <div class="route-to">
+                    <span class="route-icon">🏠</span>
+                    <span class="route-text">${job.delivery.name}</span>
                 </div>
-            `;
-            jobsPreviewList.appendChild(previewCard);
-        }
+            </div>
+            <div class="job-preview-details">
+                <div class="detail">
+                    <span class="detail-label">Jarak:</span>
+                    <span class="detail-value">${job.distance} km</span>
+                </div>
+                <div class="detail">
+                    <span class="detail-label">Estimasi:</span>
+                    <span class="detail-value">${job.estimate} min</span>
+                </div>
+            </div>
+            <div class="job-preview-footer">
+                <span class="job-preview-price">Rp ${job.payment.toLocaleString('id-ID')}</span>
+                <button class="view-job-btn" onclick="showPage('jobs')">Ambil</button>
+            </div>
+        `;
+        jobsPreviewList.appendChild(previewCard);
     });
 }
 
@@ -170,8 +210,9 @@ function loadHistory() {
     if (!historyList) return;
     historyList.innerHTML = '';
 
-    const filter = document.getElementById('historyFilter').value;
-    const filteredHistory = courierState.history.filter(job => filter === 'all' || job.status === filter);
+    const filter = document.getElementById('historyFilter');
+    const filterValue = filter ? filter.value : 'all';
+    const filteredHistory = courierState.history.filter(job => filterValue === 'all' || job.status === filterValue);
 
     if (filteredHistory.length === 0) {
         historyList.innerHTML = '<div class="no-data">Tidak ada riwayat untuk filter ini.</div>';
@@ -236,46 +277,52 @@ function updateActiveDeliveryUI() {
     if (courierState.activeDeliveries.length > 0) {
         const activeDelivery = courierState.activeDeliveries[0];
         
-        activeDeliveryCard.style.display = 'block';
-        document.getElementById('deliveryId').textContent = `#${activeDelivery.id}`;
-        document.getElementById('deliveryAddress').textContent = activeDelivery.delivery.address.substring(0, 30) + '...';
-
-        fullDeliveryCard.innerHTML = `
-            <div class="delivery-header">
-                <span class="delivery-id">#${activeDelivery.id}</span>
-                <span class="delivery-status-badge">ON DELIVERY</span>
-            </div>
-            <div class="delivery-locations">
-                <div class="location-row">
-                    <span class="location-icon"><i class="fas fa-store"></i></span>
-                    <div class="location-details">
-                        <div class="location-type">PICKUP DARI</div>
-                        <div class="location-address">${activeDelivery.pickup.name} (${activeDelivery.pickup.address})</div>
-                    </div>
-                </div>
-                <div class="location-row">
-                    <span class="location-icon end"><i class="fas fa-map-marker-alt"></i></span>
-                    <div class="location-details">
-                        <div class="location-type">TUJUAN KE</div>
-                        <div class="location-address">${activeDelivery.delivery.name} (${activeDelivery.delivery.address})</div>
-                    </div>
-                </div>
-            </div>
-            <div class="delivery-stats">
-                <div class="stat-item">
-                    <span>Jarak:</span> <strong>${activeDelivery.distance} km</strong>
-                </div>
-                <div class="stat-item">
-                    <span>Estimasi Selesai:</span> <strong>${activeDelivery.estimate} min</strong>
-                </div>
-                <div class="stat-item">
-                    <span>Pembayaran:</span> <strong>Rp ${activeDelivery.payment.toLocaleString('id-ID')}</strong>
-                </div>
-            </div>
-        `;
-        fullDeliveryCard.classList.remove('no-data');
+        if (activeDeliveryCard) activeDeliveryCard.style.display = 'block';
         
-        deliveryActions.style.display = 'flex';
+        const deliveryIdElement = document.getElementById('deliveryId');
+        const deliveryAddressElement = document.getElementById('deliveryAddress');
+        
+        if (deliveryIdElement) deliveryIdElement.textContent = `#${activeDelivery.id}`;
+        if (deliveryAddressElement) deliveryAddressElement.textContent = activeDelivery.delivery.address.substring(0, 30) + '...';
+
+        if (fullDeliveryCard) {
+            fullDeliveryCard.innerHTML = `
+                <div class="delivery-header">
+                    <span class="delivery-id">#${activeDelivery.id}</span>
+                    <span class="delivery-status-badge">ON DELIVERY</span>
+                </div>
+                <div class="delivery-locations">
+                    <div class="location-row">
+                        <span class="location-icon"><i class="fas fa-store"></i></span>
+                        <div class="location-details">
+                            <div class="location-type">PICKUP DARI</div>
+                            <div class="location-address">${activeDelivery.pickup.name} (${activeDelivery.pickup.address})</div>
+                        </div>
+                    </div>
+                    <div class="location-row">
+                        <span class="location-icon end"><i class="fas fa-map-marker-alt"></i></span>
+                        <div class="location-details">
+                            <div class="location-type">TUJUAN KE</div>
+                            <div class="location-address">${activeDelivery.delivery.name} (${activeDelivery.delivery.address})</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="delivery-stats">
+                    <div class="stat-item">
+                        <span>Jarak:</span> <strong>${activeDelivery.distance} km</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Estimasi Selesai:</span> <strong>${activeDelivery.estimate} min</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Pembayaran:</span> <strong>Rp ${activeDelivery.payment.toLocaleString('id-ID')}</strong>
+                    </div>
+                </div>
+            `;
+            fullDeliveryCard.classList.remove('no-data');
+        }
+        
+        if (deliveryActions) deliveryActions.style.display = 'flex';
         
         const startedAt = activeDelivery.startedAt ? new Date(activeDelivery.startedAt) : new Date();
         
@@ -292,7 +339,7 @@ function updateActiveDeliveryUI() {
 
             const progressBar = document.getElementById('routeProgress');
             const courierMarker = document.querySelector('.current-position');
-            if (progressBar) {
+            if (progressBar && courierMarker) {
                 const randomProgress = Math.min(90, Math.max(10, Math.floor(Math.random() * 80) + 10));
                 progressBar.style.width = `${randomProgress}%`;
                 courierMarker.style.left = `${randomProgress}%`;
@@ -305,10 +352,12 @@ function updateActiveDeliveryUI() {
         }
 
     } else {
-        activeDeliveryCard.style.display = 'none';
-        fullDeliveryCard.innerHTML = '<div class="no-data">Anda tidak sedang dalam pengiriman aktif.</div>';
-        fullDeliveryCard.classList.add('no-data');
-        deliveryActions.style.display = 'none';
+        if (activeDeliveryCard) activeDeliveryCard.style.display = 'none';
+        if (fullDeliveryCard) {
+            fullDeliveryCard.innerHTML = '<div class="no-data">Anda tidak sedang dalam pengiriman aktif.</div>';
+            fullDeliveryCard.classList.add('no-data');
+        }
+        if (deliveryActions) deliveryActions.style.display = 'none';
 
         if (window.deliveryTimerInterval) {
             clearInterval(window.deliveryTimerInterval);
@@ -322,8 +371,11 @@ function completeDelivery() {
 
     const completedJob = courierState.activeDeliveries.shift();
     completedJob.status = 'completed';
+    completedJob.completedAt = new Date();
     
     courierState.balance += completedJob.payment;
+    courierState.history.push(completedJob);
+    
     const balanceElement = document.querySelector('.balance-amount');
     if (balanceElement) {
          balanceElement.textContent = `Rp ${courierState.balance.toLocaleString('id-ID')}`;
@@ -372,6 +424,7 @@ function rejectJob(jobId) {
     
     const job = courierState.jobs.splice(jobIndex, 1)[0];
     job.status = 'cancelled';
+    job.completedAt = new Date();
     courierState.history.push(job);
     
     if (socket) {
@@ -394,7 +447,11 @@ function simulateNewJob(showNotif = true) {
     ];
     
     const pickup = locations[Math.floor(Math.random() * locations.length)];
-    const delivery = locations[Math.floor(Math.random() * locations.length)];
+    let delivery;
+    do {
+        delivery = locations[Math.floor(Math.random() * locations.length)];
+    } while (delivery === pickup);
+    
     const payment = Math.floor(Math.random() * 80 + 30) * 1000;
 
     const newJob = {
@@ -407,9 +464,12 @@ function simulateNewJob(showNotif = true) {
         status: 'new',
         createdAt: new Date(),
         customer: { id: 'CUST'+jobIdCounter, name: 'Pelanggan ' + jobIdCounter },
+        priority: Math.random() > 0.7 ? 'urgent' : 'standard'
     };
     
     courierState.jobs.push(newJob);
+    updateBadges();
+    loadJobs();
     if (showNotif) {
         showNotification(`Pesanan baru #${newJobId} tersedia! (Simulasi)`, 'info');
     }
@@ -418,10 +478,12 @@ function simulateNewJob(showNotif = true) {
 function loadOrdersFromBackend() {
     if (courierState.jobs.length === 0) {
         if (!socket || socket.disconnected) {
+            // Jika socket terputus, gunakan simulasi
             simulateNewJob(false);
             simulateNewJob(false);
             showNotification('Koneksi backend terputus, menggunakan data simulasi.', 'warning');
         } else {
+            // Minta data dari server
             socket.emit('request_initial_data', { courierId: 'courier_001' });
         }
     }
@@ -439,10 +501,16 @@ function showChatModal(jobId) {
     const modal = document.getElementById('chatModal');
     const jobIdEl = document.getElementById('chatJobId');
     
+    if (!modal || !jobIdEl) {
+        console.error('Element chat modal tidak ditemukan');
+        return;
+    }
+    
     currentChatJobId = jobId;
     jobIdEl.textContent = jobId;
     
-    document.getElementById('chatInput').value = '';
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) chatInput.value = '';
     
     if (socket) {
         console.log('📥 Meminta history chat untuk:', jobId);
@@ -456,10 +524,13 @@ function showChatModal(jobId) {
 }
 
 function closeChatModal() {
-    document.getElementById('chatModal').classList.remove('active');
-    setTimeout(() => {
-        document.getElementById('chatModal').style.display = 'none';
-    }, 300);
+    const modal = document.getElementById('chatModal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
+    }
 }
 
 function loadChatMessages(jobId) {
@@ -509,6 +580,8 @@ function createMessageElement(messageData) {
 
 function sendChatMessage() {
     const input = document.getElementById('chatInput');
+    if (!input) return;
+    
     const message = input.value.trim();
     
     if (!message || !currentChatJobId) return;
@@ -603,22 +676,41 @@ function initChatSystem() {
 
 function connectWebSocket() {
     try {
+        // Hentikan koneksi sebelumnya jika ada
+        if (socket) {
+            socket.disconnect();
+            socket = null;
+        }
+
+        console.log('🔄 Menghubungkan ke backend...');
         socket = io(FREE_BACKEND_URL, {
             query: { role: 'courier', courierId: 'courier_001' },
-            transports: ['websocket', 'polling'] 
+            transports: ['websocket', 'polling'],
+            timeout: 10000
         });
 
         socket.on('connect', () => {
             console.log('✅ Connected to FREE backend!');
             showNotification('Koneksi backend berhasil!', 'success');
+            reconnectAttempts = 0;
+            
             if (simulatedJobInterval) {
                 clearInterval(simulatedJobInterval);
                 simulatedJobInterval = null;
             }
+            
             socket.emit('get_whatsapp_status');
-            setTimeout(() => {
-                loadOrdersFromBackend();
-            }, 500);
+            // Meminta data jobs saat terkoneksi
+            socket.emit('request_initial_data', { courierId: 'courier_001' });
+        });
+
+        socket.on('initial_jobs', (jobs) => {
+            console.log('Received initial jobs:', jobs);
+            if (jobs && jobs.length > 0) {
+                courierState.jobs = jobs;
+            }
+            updateBadges();
+            loadJobs();
         });
 
         socket.on('new_job_available', (job) => {
@@ -627,47 +719,56 @@ function connectWebSocket() {
             loadJobs();
             showNotification(`📢 Pesanan baru #${job.id} tersedia! (Rp ${job.payment.toLocaleString('id-ID')})`, 'info');
         });
-        
-        socket.on('initial_jobs', (jobs) => {
-            jobs.forEach(job => {
-                if (!courierState.jobs.find(j => j.id === job.id)) {
-                    courierState.jobs.push(job);
-                }
-            });
-            updateBadges();
-            loadJobs();
-        });
 
         socket.on('whatsapp_status', (data) => {
-            updateWhatsAppStatusUI(data.status);
-            if (data.status === 'qr_received' && data.qr) {
-                showQRCodeModal(data.qr);
-                showNotification('Harap scan QR Code WhatsApp Anda.', 'warning');
-            } else if (data.status === 'connected') {
-                closeQRCodeModal();
-                showNotification('WhatsApp berhasil terhubung!', 'success');
+            console.log('WhatsApp Status:', data);
+            if (data && data.status) {
+                updateWhatsAppStatusUI(data.status);
+                if (data.status === 'qr_received' && data.qr) {
+                    showQRCodeModal(data.qr);
+                    showNotification('Harap scan QR Code WhatsApp Anda.', 'warning');
+                } else if (data.status === 'connected') {
+                    closeQRCodeModal();
+                    showNotification('WhatsApp berhasil terhubung!', 'success');
+                }
             }
         });
 
-        socket.on('disconnect', () => {
-            console.log('❌ Disconnected from FREE backend');
+        socket.on('disconnect', (reason) => {
+            console.log('❌ Disconnected from FREE backend:', reason);
             updateWhatsAppStatusUI('disconnected');
             showNotification('Koneksi backend terputus', 'error');
-            if (!simulatedJobInterval) {
-                simulatedJobInterval = setInterval(() => simulateNewJob(), 30000);
+            
+            // Coba reconnect setelah delay
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++;
+                const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                console.log(`Mencoba reconnect dalam ${delay}ms (percobaan ${reconnectAttempts})`);
+                
+                setTimeout(() => {
+                    if (!socket || socket.disconnected) {
+                        connectWebSocket();
+                    }
+                }, delay);
+            } else {
+                console.log('Max reconnection attempts reached. Using simulation mode.');
+                if (!simulatedJobInterval) {
+                    simulatedJobInterval = setInterval(() => simulateNewJob(), 30000);
+                }
             }
         });
-        
-        socket.on('connect', () => {
-            if (simulatedJobInterval) {
-                clearInterval(simulatedJobInterval);
-                simulatedJobInterval = null;
-            }
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+            showNotification('Gagal terhubung ke backend', 'error');
+            updateWhatsAppStatusUI('disconnected');
         });
 
     } catch (error) {
         console.error('Error connecting to Socket.IO:', error);
-        showNotification('Gagal terhubung ke Socket.IO. Cek URL backend Anda.', 'error');
+        showNotification('Gagal terhubung ke Socket.IO. Menggunakan mode simulasi.', 'error');
+        updateWhatsAppStatusUI('disconnected');
+        
         if (!simulatedJobInterval) {
             simulatedJobInterval = setInterval(() => simulateNewJob(), 30000);
         }
@@ -694,23 +795,52 @@ function showPage(pageId) {
         if (pageId === 'history') loadHistory();
         if (pageId === 'earnings') loadEarnings();
         if (pageId === 'active-delivery') updateActiveDeliveryUI();
+        
+        // Update current date
+        if (pageId === 'dashboard') {
+            const currentDateEl = document.getElementById('currentDate');
+            if (currentDateEl) {
+                const now = new Date();
+                currentDateEl.textContent = now.toLocaleDateString('id-ID', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            }
+        }
     }
 }
 
 function initCourierApp() {
-    document.getElementById('menuBtn').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.add('active');
-        document.getElementById('overlay').classList.add('active');
-    });
-    document.getElementById('closeSidebar').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.remove('active');
-        document.getElementById('overlay').classList.remove('active');
-    });
-    document.getElementById('overlay').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.remove('active');
-        document.getElementById('overlay').classList.remove('active');
-    });
+    // Initialize menu button
+    const menuBtn = document.getElementById('menuBtn');
+    if (menuBtn) {
+        menuBtn.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        });
+    }
+    
+    // Initialize close sidebar
+    const closeSidebar = document.getElementById('closeSidebar');
+    if (closeSidebar) {
+        closeSidebar.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        });
+    }
+    
+    // Initialize overlay
+    const overlay = document.getElementById('overlay');
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        });
+    }
 
+    // Initialize navigation
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', function(e) {
             e.preventDefault();
@@ -721,31 +851,50 @@ function initCourierApp() {
         });
     });
 
-    document.getElementById('statusToggle').addEventListener('change', function() {
-        courierState.onlineMode = this.checked;
-        showNotification(`Mode ${this.checked ? 'Online' : 'Offline'}`, this.checked ? 'success' : 'warning');
-        updateWhatsAppStatusUI(whatsappStatus);
-    });
+    // Initialize status toggle
+    const statusToggle = document.getElementById('statusToggle');
+    if (statusToggle) {
+        statusToggle.addEventListener('change', function() {
+            courierState.onlineMode = this.checked;
+            showNotification(`Mode ${this.checked ? 'Online' : 'Offline'}`, this.checked ? 'success' : 'warning');
+            updateWhatsAppStatusUI(whatsappStatus);
+            
+            if (this.checked && (!socket || socket.disconnected)) {
+                connectWebSocket();
+            }
+        });
+    }
     
-    updateBadges();
-    loadHistory(); 
-    loadEarnings();
-    updateActiveDeliveryUI(); 
-    
+    // Initialize notification container if not exists
     if (!document.getElementById('notificationContainer')) {
         const container = document.createElement('div');
         container.id = 'notificationContainer';
         document.body.appendChild(container);
     }
-
+    
+    updateBadges();
+    loadHistory(); 
+    loadEarnings();
+    updateActiveDeliveryUI();
+    
+    // Initialize chat system
     initChatSystem();
+    
+    // Set current date
+    const currentDateEl = document.getElementById('currentDate');
+    if (currentDateEl) {
+        const now = new Date();
+        currentDateEl.textContent = now.toLocaleDateString('id-ID', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+    }
 }
 
+// Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     initCourierApp();
     connectWebSocket();
-    setTimeout(() => {
-        loadOrdersFromBackend();
-    }, 500); 
-    updateActiveDeliveryUI();
 });
