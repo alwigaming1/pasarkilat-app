@@ -2740,3 +2740,127 @@ input:checked + .slider:before {
         font-size: 1.1rem;
     }
 }
+/* Chat Header Actions */
+.chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.call-customer-btn {
+    background: var(--primary-green);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--white);
+    font-size: 1.2rem;
+}
+
+.call-customer-btn:hover {
+    background: var(--dark-green);
+    transform: scale(1.1);
+}
+
+.call-customer-btn.ringing {
+    animation: ring 0.5s ease-in-out infinite;
+}
+
+@keyframes ring {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(5deg); }
+    50% { transform: rotate(-5deg); }
+    75% { transform: rotate(5deg); }
+}
+
+/* Tombol Telepon di Delivery Actions */
+.action-btn.call {
+    background: var(--secondary-blue);
+    color: var(--white);
+    border: none;
+}
+
+.action-btn.call:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+}
+
+/* Responsive adjustments untuk tombol telepon */
+@media (max-width: 375px) {
+    .chat-header-actions {
+        gap: 8px;
+    }
+    
+    .call-customer-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem;
+    }
+}
+/* Chat Header Actions */
+.chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.call-customer-btn {
+    background: var(--primary-green);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--white);
+    font-size: 1.2rem;
+}
+
+.call-customer-btn:hover {
+    background: var(--dark-green);
+    transform: scale(1.1);
+}
+
+.call-customer-btn.ringing {
+    animation: ring 0.5s ease-in-out infinite;
+}
+
+@keyframes ring {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(5deg); }
+    50% { transform: rotate(-5deg); }
+    75% { transform: rotate(5deg); }
+}
+
+/* Tombol Telepon di Delivery Actions */
+.action-btn.call {
+    background: var(--secondary-blue);
+    color: var(--white);
+    border: none;
+}
+
+.action-btn.call:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+}
+
+/* Responsive adjustments untuk tombol telepon */
+@media (max-width: 375px) {
+    .chat-header-actions {
+        gap: 8px;
+    }
+    
+    .call-customer-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem;
+    }
+}

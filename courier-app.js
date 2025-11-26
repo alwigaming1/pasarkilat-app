@@ -1,4 +1,4 @@
-// courier-app.js - VERSI DIPERBAIKI DENGAN FIX TELEPHONE FUNCTION
+// courier-app.js - PERBAIKAN FUNGSI TELEPON BIASA
 
 const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app';
 
@@ -97,11 +97,8 @@ function closeQRCodeModal() {
 
 function updateBadges() {
     const jobCount = courierState.jobs.length;
-    // Update badge di sidebar
     const badgeElementSidebar = document.querySelector('.sidebar-nav .nav-item[data-page="jobs"] .nav-badge');
-    // Update badge di dashboard (lihat semua)
     const badgeElementDashboard = document.getElementById('jobsBadge');
-    // Update jobs count di halaman jobs
     const jobsCountElement = document.getElementById('jobsCount');
     
     if (badgeElementSidebar) {
@@ -115,7 +112,6 @@ function updateBadges() {
         jobsCountElement.textContent = jobCount;
     }
     
-    // Update balance
     const balanceElement = document.querySelector('.balance-amount');
     if (balanceElement) {
          balanceElement.textContent = `Rp ${courierState.balance.toLocaleString('id-ID')}`;
@@ -127,21 +123,17 @@ function loadJobs() {
     const jobsPreviewList = document.getElementById('jobsPreviewList');
     if (!jobsList || !jobsPreviewList) return;
     
-    // Kosongkan list
     jobsList.innerHTML = '';
     jobsPreviewList.innerHTML = '';
 
-    // Jika tidak ada jobs
     if (courierState.jobs.length === 0) {
         jobsList.innerHTML = '<div class="no-data">Tidak ada pesanan baru saat ini.</div>';
         jobsPreviewList.innerHTML = '<div class="no-data">Tidak ada pesanan baru.</div>';
         return;
     }
 
-    // Urutkan jobs berdasarkan waktu (terbaru pertama)
     const sortedJobs = [...courierState.jobs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    // Isi jobsList (halaman jobs)
     sortedJobs.forEach(job => {
         const jobItem = document.createElement('div');
         jobItem.className = 'job-item';
@@ -163,7 +155,6 @@ function loadJobs() {
         jobsList.appendChild(jobItem);
     });
 
-    // Isi jobsPreviewList (halaman dashboard) - maksimal 2
     sortedJobs.slice(0, 2).forEach(job => {
         const previewCard = document.createElement('div');
         previewCard.className = `job-preview-card ${job.priority === 'urgent' ? 'urgent' : ''}`;
@@ -478,12 +469,10 @@ function simulateNewJob(showNotif = true) {
 function loadOrdersFromBackend() {
     if (courierState.jobs.length === 0) {
         if (!socket || socket.disconnected) {
-            // Jika socket terputus, gunakan simulasi
             simulateNewJob(false);
             simulateNewJob(false);
             showNotification('Koneksi backend terputus, menggunakan data simulasi.', 'warning');
         } else {
-            // Minta data dari server
             socket.emit('request_initial_data', { courierId: 'courier_001' });
         }
     }
@@ -493,7 +482,7 @@ function loadOrdersFromBackend() {
     loadEarnings();
 }
 
-// === TELEPHONE FUNCTIONS - FIX FINAL ===
+// === TELEPHONE FUNCTIONS - PERBAIKAN ===
 
 function callCustomer(jobId) {
     console.log('📞 [TELEPON] Memulai panggilan ke customer untuk job:', jobId);
@@ -510,10 +499,9 @@ function callCustomer(jobId) {
 
     console.log('📞 [TELEPON] Mengirim request nomor customer untuk job:', jobId);
     
-    // Show loading notification
     showNotification('Mencari nomor customer...', 'info');
     
-   // Kirim request ke backend
+    // PERBAIKAN: Gunakan event yang sesuai dengan backend
     socket.emit('request_customer_phone', { 
         jobId: jobId
     });
@@ -649,29 +637,30 @@ function addMessageToChat(jobId, messageData) {
     }
 }
 
-// === SOCKET EVENT LISTENERS - FIX FINAL ===
+// === SOCKET EVENT LISTENERS - PERBAIKAN ===
 
 function setupSocketListeners() {
     if (!socket) return;
     
-    console.log('🔧 Setup semua socket listeners');
+    console.log('🔧 Setup semua socket listeners termasuk telepon biasa');
     
-    // === TELEPHONE LISTENER - FIX: Gunakan once untuk menghindari duplikasi ===
-    socket.off('customer_phone_received'); // Hapus listener lama
+    // === PERBAIKAN: TELEPHONE LISTENER ===
+    socket.off('customer_phone_received');
     socket.on('customer_phone_received', function handleCustomerPhone(data) {
-        console.log('📞 [TELEPON] Response customer_phone_received:', data);
+        console.log('📞 [CLIENT] Response customer_phone_received:', data);
         
         if (data && data.success && data.phone) {
-            // Format nomor untuk panggilan WhatsApp
-            const formattedPhone = data.phone.replace(/\D/g, '');
-            const whatsappCallUrl = `https://wa.me/${formattedPhone}`;
+            // Format nomor untuk panggilan telepon biasa
+            const formattedPhone = formatPhoneForCall(data.phone);
+            const telUrl = `tel:${formattedPhone}`;
             
-            console.log('🔗 WhatsApp call URL:', whatsappCallUrl);
+            console.log('🔗 Telepon biasa URL:', telUrl);
+            console.log('📞 Memanggil customer:', formattedPhone);
             
-            // Buka jendela baru untuk panggilan WhatsApp
-            window.open(whatsappCallUrl, '_blank', 'noopener,noreferrer');
+            // Buka aplikasi telepon biasa
+            window.location.href = telUrl;
             
-            showNotification(`Membuka panggilan WhatsApp ke customer...`, 'success');
+            showNotification(`Membuka panggilan ke customer ${formattedPhone}...`, 'success');
             
         } else {
             const errorMsg = data?.error || 'Tidak dapat mendapatkan nomor customer';
@@ -759,10 +748,36 @@ function setupSocketListeners() {
     // Debug: Log semua event socket untuk troubleshooting
     socket.offAny();
     socket.onAny((eventName, ...args) => {
-        if (eventName !== 'customer_phone_received') { // Hindari spam log untuk event ini
-            console.log(`🔍 Socket Event: ${eventName}`, args);
+        if (eventName !== 'customer_phone_received') {
+            console.log(`🔍 [CLIENT] Socket Event: ${eventName}`, args);
         }
     });
+}
+
+// === UTILITY FUNCTIONS FOR PHONE CALL ===
+
+function formatPhoneForCall(phone) {
+    // Hapus semua karakter non-digit
+    let cleaned = phone.replace(/\D/g, '');
+    
+    console.log('📞 Formatting phone:', cleaned);
+    
+    // Jika nomor sudah diawali dengan 62, ganti dengan 0
+    if (cleaned.startsWith('62')) {
+        const localFormat = '0' + cleaned.substring(2);
+        console.log('📞 Converted 62 to local:', localFormat);
+        return localFormat;
+    }
+    
+    // Jika nomor tanpa kode negara dan panjang 10-12 digit, pastikan ada 0
+    if (cleaned.length >= 10 && cleaned.length <= 12 && !cleaned.startsWith('0')) {
+        const localFormat = '0' + cleaned;
+        console.log('📞 Added leading 0:', localFormat);
+        return localFormat;
+    }
+    
+    console.log('📞 Using original format:', cleaned);
+    return cleaned;
 }
 
 function initChatSystem() {
@@ -775,7 +790,7 @@ function initChatSystem() {
         });
     }
     
-    // Event listener untuk tombol telepon - FIX: Gunakan event delegation
+    // Event listener untuk tombol telepon
     document.addEventListener('click', function(e) {
         if (e.target.closest('#callCustomerBtn')) {
             console.log('🔘 Call button clicked, currentChatJobId:', currentChatJobId);
@@ -801,7 +816,6 @@ function initChatSystem() {
 
 function connectWebSocket() {
     try {
-        // Hentikan koneksi sebelumnya jika ada
         if (socket) {
             socket.disconnect();
             socket = null;
@@ -824,11 +838,9 @@ function connectWebSocket() {
                 simulatedJobInterval = null;
             }
             
-            // Setup semua listeners setelah terkoneksi
             setupSocketListeners();
             
             socket.emit('get_whatsapp_status');
-            // Meminta data jobs saat terkoneksi
             socket.emit('request_initial_data', { courierId: 'courier_001' });
         });
 
@@ -837,7 +849,6 @@ function connectWebSocket() {
             updateWhatsAppStatusUI('disconnected');
             showNotification('Koneksi backend terputus', 'error');
             
-            // Coba reconnect setelah delay
             if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
                 reconnectAttempts++;
                 const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
@@ -894,7 +905,6 @@ function showPage(pageId) {
         if (pageId === 'earnings') loadEarnings();
         if (pageId === 'active-delivery') updateActiveDeliveryUI();
         
-        // Update current date
         if (pageId === 'dashboard') {
             const currentDateEl = document.getElementById('currentDate');
             if (currentDateEl) {
@@ -911,7 +921,6 @@ function showPage(pageId) {
 }
 
 function initCourierApp() {
-    // Initialize menu button
     const menuBtn = document.getElementById('menuBtn');
     if (menuBtn) {
         menuBtn.addEventListener('click', () => {
@@ -920,7 +929,6 @@ function initCourierApp() {
         });
     }
     
-    // Initialize close sidebar
     const closeSidebar = document.getElementById('closeSidebar');
     if (closeSidebar) {
         closeSidebar.addEventListener('click', () => {
@@ -929,7 +937,6 @@ function initCourierApp() {
         });
     }
     
-    // Initialize overlay
     const overlay = document.getElementById('overlay');
     if (overlay) {
         overlay.addEventListener('click', () => {
@@ -938,7 +945,6 @@ function initCourierApp() {
         });
     }
 
-    // Initialize navigation
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', function(e) {
             e.preventDefault();
@@ -949,7 +955,6 @@ function initCourierApp() {
         });
     });
 
-    // Initialize status toggle
     const statusToggle = document.getElementById('statusToggle');
     if (statusToggle) {
         statusToggle.addEventListener('change', function() {
@@ -963,7 +968,6 @@ function initCourierApp() {
         });
     }
     
-    // Initialize notification container if not exists
     if (!document.getElementById('notificationContainer')) {
         const container = document.createElement('div');
         container.id = 'notificationContainer';
@@ -975,10 +979,8 @@ function initCourierApp() {
     loadEarnings();
     updateActiveDeliveryUI();
     
-    // Initialize chat system
     initChatSystem();
     
-    // Set current date
     const currentDateEl = document.getElementById('currentDate');
     if (currentDateEl) {
         const now = new Date();
