@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="id">
+<!DOCTYPE html> <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -629,42 +628,47 @@
             </div>
         </div>
 
-        <!-- Chat Modal -->
-        <div class="chat-modal" id="chatModal">
-            <div class="chat-modal-content">
-                <div class="chat-header">
-                    <div class="chat-customer-info">
-                        <div class="chat-avatar">👤</div>
-                        <div class="chat-details">
-                            <div class="chat-name">Customer #<span id="chatJobId"></span></div>
-                            <div class="chat-status whatsapp-connected">Online</div>
-                        </div>
-                    </div>
-                    <button class="close-chat" onclick="closeChatModal()">✕</button>
+       <!-- Chat Modal -->
+<div class="chat-modal" id="chatModal">
+    <div class="chat-modal-content">
+        <div class="chat-header">
+            <div class="chat-customer-info">
+                <div class="chat-avatar">👤</div>
+                <div class="chat-details">
+                    <div class="chat-name">Customer #<span id="chatJobId"></span></div>
+                    <div class="chat-status whatsapp-connected">Online</div>
                 </div>
-                <div class="chat-messages" id="chatMessages">
-                    <div class="message-item received">
-                        <div class="message-bubble">Halo kurir, paket saya sudah dekat?</div>
-                        <div class="message-footer">
-                            <span class="message-time">10:00</span>
-                        </div>
-                    </div>
-                    <div class="message-item sent">
-                        <div class="message-bubble">Selamat siang, ya sebentar lagi sampai. Saya sedang di jalan.</div>
-                        <div class="message-footer">
-                            <span class="message-time">10:02</span>
-                            <span class="message-status read">✓✓</span>
-                        </div>
-                    </div>
+            </div>
+            <div class="chat-header-actions">
+
+                <!-- Tombol Telepon Baru -->
+                <button class="call-customer-btn" onclick="callCustomer(currentChatJobId)" title="Telepon Customer">
+                    <span class="call-icon">📞</span>
+                </button>
+                <button class="close-chat" onclick="closeChatModal()">✕</button>
+            </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="message-item received">
+                <div class="message-bubble">Halo kurir, paket saya sudah dekat?</div>
+                <div class="message-footer">
+                    <span class="message-time">10:00</span>
                 </div>
-                <div class="chat-input-area">
-                    <input type="text" placeholder="Ketik pesan..." id="chatInput">
-                    <button onclick="sendChatMessage()">Kirim</button>
+            </div>
+            <div class="message-item sent">
+                <div class="message-bubble">Selamat siang, ya sebentar lagi sampai. Saya sedang di jalan.</div>
+                <div class="message-footer">
+                    <span class="message-time">10:02</span>
+                    <span class="message-status read">✓✓</span>
                 </div>
             </div>
         </div>
-        
+        <div class="chat-input-area">
+            <input type="text" placeholder="Ketik pesan..." id="chatInput">
+            <button onclick="sendChatMessage()">Kirim</button>
+        </div>
     </div>
+</div>
 
     <!-- Scripts -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>

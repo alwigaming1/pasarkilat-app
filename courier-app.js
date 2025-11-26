@@ -1,4 +1,4 @@
-// courier-app.js - VERSI DIPERBAIKI DENGAN BACKEND STABIL
+// courier-app.js - VERSI DIPERBAIKI DENGAN FIX TELEPHONE FUNCTION
 
 const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app';
 
@@ -493,6 +493,32 @@ function loadOrdersFromBackend() {
     loadEarnings();
 }
 
+// === TELEPHONE FUNCTIONS - FIX FINAL ===
+
+function callCustomer(jobId) {
+    console.log('📞 [TELEPON] Memulai panggilan ke customer untuk job:', jobId);
+    
+    if (!jobId) {
+        showNotification('Tidak ada job yang aktif untuk dipanggil', 'error');
+        return;
+    }
+
+    if (!socket || socket.disconnected) {
+        showNotification('Koneksi backend terputus. Tidak dapat melakukan panggilan.', 'error');
+        return;
+    }
+
+    console.log('📞 [TELEPON] Mengirim request nomor customer untuk job:', jobId);
+    
+    // Show loading notification
+    showNotification('Mencari nomor customer...', 'info');
+    
+   // Kirim request ke backend
+    socket.emit('request_customer_phone', { 
+        jobId: jobId
+    });
+}
+
 // === CHAT FUNCTIONS ===
 
 function showChatModal(jobId) {
@@ -623,10 +649,38 @@ function addMessageToChat(jobId, messageData) {
     }
 }
 
-function setupChatSocketListeners() {
+// === SOCKET EVENT LISTENERS - FIX FINAL ===
+
+function setupSocketListeners() {
     if (!socket) return;
     
-    // Hapus listener lama untuk menghindari duplikasi
+    console.log('🔧 Setup semua socket listeners');
+    
+    // === TELEPHONE LISTENER - FIX: Gunakan once untuk menghindari duplikasi ===
+    socket.off('customer_phone_received'); // Hapus listener lama
+    socket.on('customer_phone_received', function handleCustomerPhone(data) {
+        console.log('📞 [TELEPON] Response customer_phone_received:', data);
+        
+        if (data && data.success && data.phone) {
+            // Format nomor untuk panggilan WhatsApp
+            const formattedPhone = data.phone.replace(/\D/g, '');
+            const whatsappCallUrl = `https://wa.me/${formattedPhone}`;
+            
+            console.log('🔗 WhatsApp call URL:', whatsappCallUrl);
+            
+            // Buka jendela baru untuk panggilan WhatsApp
+            window.open(whatsappCallUrl, '_blank', 'noopener,noreferrer');
+            
+            showNotification(`Membuka panggilan WhatsApp ke customer...`, 'success');
+            
+        } else {
+            const errorMsg = data?.error || 'Tidak dapat mendapatkan nomor customer';
+            console.error('❌ Error telepon:', errorMsg);
+            showNotification(`Gagal memanggil customer: ${errorMsg}`, 'error');
+        }
+    });
+    
+    // === CHAT LISTENERS ===
     socket.off('new_message');
     socket.off('message_sent');
     socket.off('chat_history');
@@ -634,7 +688,6 @@ function setupChatSocketListeners() {
     socket.on('new_message', (data) => {
         console.log('📨 Pesan baru dari server:', data);
         
-        // PERBAIKAN: Handle struktur data yang konsisten
         if (data && data.jobId && data.message) {
             const messageData = data.message;
             console.log(`💬 Memproses pesan untuk job ${data.jobId}:`, messageData);
@@ -669,9 +722,46 @@ function setupChatSocketListeners() {
         }
     });
 
+    // === OTHER LISTENERS ===
+    socket.off('initial_jobs');
+    socket.on('initial_jobs', (jobs) => {
+        console.log('Received initial jobs:', jobs);
+        if (jobs && jobs.length > 0) {
+            courierState.jobs = jobs;
+        }
+        updateBadges();
+        loadJobs();
+    });
+
+    socket.off('new_job_available');
+    socket.on('new_job_available', (job) => {
+        courierState.jobs.push(job);
+        updateBadges();
+        loadJobs();
+        showNotification(`📢 Pesanan baru #${job.id} tersedia! (Rp ${job.payment.toLocaleString('id-ID')})`, 'info');
+    });
+
+    socket.off('whatsapp_status');
+    socket.on('whatsapp_status', (data) => {
+        console.log('WhatsApp Status:', data);
+        if (data && data.status) {
+            updateWhatsAppStatusUI(data.status);
+            if (data.status === 'qr_received' && data.qr) {
+                showQRCodeModal(data.qr);
+                showNotification('Harap scan QR Code WhatsApp Anda.', 'warning');
+            } else if (data.status === 'connected') {
+                closeQRCodeModal();
+                showNotification('WhatsApp berhasil terhubung!', 'success');
+            }
+        }
+    });
+
     // Debug: Log semua event socket untuk troubleshooting
+    socket.offAny();
     socket.onAny((eventName, ...args) => {
-        console.log(`🔍 Socket Event: ${eventName}`, args);
+        if (eventName !== 'customer_phone_received') { // Hindari spam log untuk event ini
+            console.log(`🔍 Socket Event: ${eventName}`, args);
+        }
     });
 }
 
@@ -685,7 +775,26 @@ function initChatSystem() {
         });
     }
     
-    setupChatSocketListeners();
+    // Event listener untuk tombol telepon - FIX: Gunakan event delegation
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#callCustomerBtn')) {
+            console.log('🔘 Call button clicked, currentChatJobId:', currentChatJobId);
+            
+            if (currentChatJobId) {
+                // Add ringing animation
+                const callBtn = e.target.closest('#callCustomerBtn');
+                callBtn.classList.add('ringing');
+                setTimeout(() => {
+                    callBtn.classList.remove('ringing');
+                }, 500);
+                
+                callCustomer(currentChatJobId);
+            } else {
+                console.error('❌ No currentChatJobId available');
+                showNotification('Tidak ada customer yang aktif untuk dipanggil', 'error');
+            }
+        }
+    });
 }
 
 // --- SOCKET.IO CONNECTION ---
@@ -706,7 +815,7 @@ function connectWebSocket() {
         });
 
         socket.on('connect', () => {
-            console.log('✅ Connected to FREE backend!');
+            console.log('✅ Connected to FREE backend! Socket ID:', socket.id);
             showNotification('Koneksi backend berhasil!', 'success');
             reconnectAttempts = 0;
             
@@ -715,42 +824,12 @@ function connectWebSocket() {
                 simulatedJobInterval = null;
             }
             
+            // Setup semua listeners setelah terkoneksi
+            setupSocketListeners();
+            
             socket.emit('get_whatsapp_status');
             // Meminta data jobs saat terkoneksi
             socket.emit('request_initial_data', { courierId: 'courier_001' });
-            
-            // Setup chat listeners setelah terkoneksi
-            setupChatSocketListeners();
-        });
-
-        socket.on('initial_jobs', (jobs) => {
-            console.log('Received initial jobs:', jobs);
-            if (jobs && jobs.length > 0) {
-                courierState.jobs = jobs;
-            }
-            updateBadges();
-            loadJobs();
-        });
-
-        socket.on('new_job_available', (job) => {
-            courierState.jobs.push(job);
-            updateBadges();
-            loadJobs();
-            showNotification(`📢 Pesanan baru #${job.id} tersedia! (Rp ${job.payment.toLocaleString('id-ID')})`, 'info');
-        });
-
-        socket.on('whatsapp_status', (data) => {
-            console.log('WhatsApp Status:', data);
-            if (data && data.status) {
-                updateWhatsAppStatusUI(data.status);
-                if (data.status === 'qr_received' && data.qr) {
-                    showQRCodeModal(data.qr);
-                    showNotification('Harap scan QR Code WhatsApp Anda.', 'warning');
-                } else if (data.status === 'connected') {
-                    closeQRCodeModal();
-                    showNotification('WhatsApp berhasil terhubung!', 'success');
-                }
-            }
         });
 
         socket.on('disconnect', (reason) => {
