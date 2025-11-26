@@ -1,4 +1,4 @@
-// courier-app.js - PERBAIKAN FUNGSI TELEPON BIASA
+// courier-app.js - PERBAIKAN UNTUK MENERIMA PESANAN DARI ADMIN DAN TELEPON
 
 const FREE_BACKEND_URL = 'https://backend-production-e12e5.up.railway.app';
 
@@ -145,7 +145,7 @@ function loadJobs() {
             <div class="job-details">
                 <p><strong>Pickup:</strong> ${job.pickup.name} - ${job.pickup.address.substring(0, 30)}...</p>
                 <p><strong>Delivery:</strong> ${job.delivery.name} - ${job.delivery.address.substring(0, 30)}...</p>
-                <p><strong>Jarak:</strong> ${job.distance} km | <strong>Est. Waktu:</strong> ${job.estimate} min</p>
+                <p><strong>Jarak:</strong> ${job.distance} | <strong>Est. Waktu:</strong> ${job.estimate}</p>
             </div>
             <div class="job-actions">
                 <button class="btn btn-accept" onclick="acceptJob('${job.id}')">TERIMA (Rp ${job.payment.toLocaleString('id-ID')})</button>
@@ -180,11 +180,11 @@ function loadJobs() {
             <div class="job-preview-details">
                 <div class="detail">
                     <span class="detail-label">Jarak:</span>
-                    <span class="detail-value">${job.distance} km</span>
+                    <span class="detail-value">${job.distance}</span>
                 </div>
                 <div class="detail">
                     <span class="detail-label">Estimasi:</span>
-                    <span class="detail-value">${job.estimate} min</span>
+                    <span class="detail-value">${job.estimate}</span>
                 </div>
             </div>
             <div class="job-preview-footer">
@@ -300,10 +300,10 @@ function updateActiveDeliveryUI() {
                 </div>
                 <div class="delivery-stats">
                     <div class="stat-item">
-                        <span>Jarak:</span> <strong>${activeDelivery.distance} km</strong>
+                        <span>Jarak:</span> <strong>${activeDelivery.distance}</strong>
                     </div>
                     <div class="stat-item">
-                        <span>Estimasi Selesai:</span> <strong>${activeDelivery.estimate} min</strong>
+                        <span>Estimasi Selesai:</span> <strong>${activeDelivery.estimate}</strong>
                     </div>
                     <div class="stat-item">
                         <span>Pembayaran:</span> <strong>Rp ${activeDelivery.payment.toLocaleString('id-ID')}</strong>
@@ -449,8 +449,8 @@ function simulateNewJob(showNotif = true) {
         id: newJobId,
         pickup: pickup,
         delivery: delivery,
-        distance: (Math.random() * 5 + 2).toFixed(1),
-        estimate: Math.floor(Math.random() * 20 + 15),
+        distance: (Math.random() * 5 + 2).toFixed(1) + ' km',
+        estimate: Math.floor(Math.random() * 20 + 15) + ' menit',
         payment: payment,
         status: 'new',
         createdAt: new Date(),
@@ -502,7 +502,7 @@ function callCustomer(jobId) {
     showNotification('Mencari nomor customer...', 'info');
     
     // PERBAIKAN: Gunakan event yang sesuai dengan backend
-    socket.emit('request_customer_phone', { 
+    socket.emit('get_customer_phone', { 
         jobId: jobId
     });
 }
@@ -644,6 +644,61 @@ function setupSocketListeners() {
     
     console.log('🔧 Setup semua socket listeners termasuk telepon biasa');
     
+    // === PERBAIKAN: PESANAN BARU DARI ADMIN ===
+    socket.off('new_job_available');
+    socket.on('new_job_available', (job) => {
+        console.log('📦 Menerima pesanan baru dari admin:', job);
+        
+        // Cek apakah pesanan sudah ada
+        const existingJobIndex = courierState.jobs.findIndex(j => j.id === job.id);
+        if (existingJobIndex === -1) {
+            // Format ulang job untuk konsistensi
+            const formattedJob = {
+                id: job.id,
+                pickup: job.pickup,
+                delivery: job.delivery,
+                distance: job.distance,
+                estimate: job.estimate,
+                payment: job.payment,
+                status: 'new',
+                createdAt: job.createdAt ? new Date(job.createdAt) : new Date(),
+                customer: job.customer || { id: 'CUST'+job.id, name: job.customerName || 'Customer' },
+                priority: job.priority || 'standard'
+            };
+            
+            courierState.jobs.push(formattedJob);
+            updateBadges();
+            loadJobs();
+            showNotification(`📢 Pesanan baru #${job.id} dari Admin! (Rp ${job.payment.toLocaleString('id-ID')})`, 'info');
+        }
+    });
+
+    // === PERBAIKAN: INITIAL JOBS DARI SERVER ===
+    socket.off('initial_jobs');
+    socket.on('initial_jobs', (jobs) => {
+        console.log('📦 Received initial jobs from server:', jobs);
+        if (jobs && jobs.length > 0) {
+            // Format jobs untuk konsistensi
+            const formattedJobs = jobs.map(job => ({
+                id: job.id,
+                pickup: job.pickup,
+                delivery: job.delivery,
+                distance: job.distance,
+                estimate: job.estimate,
+                payment: job.payment,
+                status: 'new',
+                createdAt: job.createdAt ? new Date(job.createdAt) : new Date(),
+                customer: job.customer || { id: 'CUST'+job.id, name: job.customerName || 'Customer' },
+                priority: job.priority || 'standard'
+            }));
+            
+            courierState.jobs = formattedJobs;
+            updateBadges();
+            loadJobs();
+            showNotification(`✅ Loaded ${jobs.length} pesanan dari server`, 'success');
+        }
+    });
+
     // === PERBAIKAN: TELEPHONE LISTENER ===
     socket.off('customer_phone_received');
     socket.on('customer_phone_received', function handleCustomerPhone(data) {
@@ -711,25 +766,6 @@ function setupSocketListeners() {
         }
     });
 
-    // === OTHER LISTENERS ===
-    socket.off('initial_jobs');
-    socket.on('initial_jobs', (jobs) => {
-        console.log('Received initial jobs:', jobs);
-        if (jobs && jobs.length > 0) {
-            courierState.jobs = jobs;
-        }
-        updateBadges();
-        loadJobs();
-    });
-
-    socket.off('new_job_available');
-    socket.on('new_job_available', (job) => {
-        courierState.jobs.push(job);
-        updateBadges();
-        loadJobs();
-        showNotification(`📢 Pesanan baru #${job.id} tersedia! (Rp ${job.payment.toLocaleString('id-ID')})`, 'info');
-    });
-
     socket.off('whatsapp_status');
     socket.on('whatsapp_status', (data) => {
         console.log('WhatsApp Status:', data);
@@ -792,12 +828,12 @@ function initChatSystem() {
     
     // Event listener untuk tombol telepon
     document.addEventListener('click', function(e) {
-        if (e.target.closest('#callCustomerBtn')) {
+        if (e.target.closest('.call-customer-btn')) {
             console.log('🔘 Call button clicked, currentChatJobId:', currentChatJobId);
             
             if (currentChatJobId) {
                 // Add ringing animation
-                const callBtn = e.target.closest('#callCustomerBtn');
+                const callBtn = e.target.closest('.call-customer-btn');
                 callBtn.classList.add('ringing');
                 setTimeout(() => {
                     callBtn.classList.remove('ringing');
